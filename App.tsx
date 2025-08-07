@@ -269,7 +269,7 @@ const App: React.FC = () => {
           <div className="px-2 sm:px-4 lg:px-0">
             <CategoryFilter selectedCategories={selectedCategories} onToggleCategory={handleToggleCategoryFilter} />
           </div>
-          <main className="px-2 sm:px-4 lg:px-0 pb-32 flex-grow">
+          <main className="px-2 sm:px-4 lg:px-0 pb-40 flex-grow">
               <GroceryList 
                   items={sortedItems}
                   onToggleChecked={handleToggleChecked}

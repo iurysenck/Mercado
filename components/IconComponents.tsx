@@ -157,3 +157,9 @@ export const ArrowUturnLeftIcon: React.FC<{ className?: string }> = ({ className
   <path fillRule="evenodd" d="M3.25 9a.75.75 0 0 1 .75-.75h5.5a.75.75 0 0 1 0 1.5H4a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-5.5a.75.75 0 0 1 1.5 0v5.5A1.75 1.75 0 0 1 11.5 18h-7.5A1.75 1.75 0 0 1 2.25 16.25v-7.5c0-.966.784-1.75 1.75-1.75Z" clipRule="evenodd" />
 </svg>
 );
+
+export const XMarkIcon: React.FC<{ className?: string }> = ({ className }) => (
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className}>
+  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+</svg>
+);
