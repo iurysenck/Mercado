@@ -77,11 +77,7 @@
 
 ## 📱 Funcionalidades Especiais
 
-### 🎉 Mensagens Engraçadas
-- Aparecem aleatoriamente a partir de R$ 300
-- Nova mensagem a cada R$ 100 adicionados
-- Posicionadas elegantemente acima do footer
-- Botão de fechar para controle do usuário
+
 
 ### 🎨 Background Interativo
 - Fundo dinâmico que muda conforme o estado

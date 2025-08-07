@@ -1,7 +1,6 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GroceryItem, FunnyMessage } from '../types';
-import { FUNNY_MESSAGES } from '../constants';
 import { BroomIcon, ArrowUturnLeftIcon, XMarkIcon } from './IconComponents';
 
 interface SummaryFooterProps {
@@ -10,9 +9,73 @@ interface SummaryFooterProps {
     onUncheckAll: () => void;
 }
 
+const FUNNY_MESSAGES: FunnyMessage[] = [
+    {
+        quote: "Parece que você está fazendo uma festa! 🎉",
+        author: { name: "Sistema", description: "Detector de Gastos" }
+    },
+    {
+        quote: "Seu carrinho está mais pesado que minhas responsabilidades! 😅",
+        author: { name: "Carrinho", description: "Muito Ocupado" }
+    },
+    {
+        quote: "Com essa lista, até o mercado vai ficar impressionado! 🛒",
+        author: { name: "Mercado", description: "Sempre Presente" }
+    },
+    {
+        quote: "Você está comprando para um exército ou só para o fim de semana? 🤔",
+        author: { name: "Lista", description: "Curiosa" }
+    },
+    {
+        quote: "Compras inteligentes, vida mais leve! ✨",
+        author: { name: "Sistema", description: "Otimista" }
+    },
+    {
+        quote: "Seu carrinho está mais organizado que minha vida! 📝",
+        author: { name: "Organização", description: "Admiradora" }
+    },
+    {
+        quote: "Parece que você tem um plano! (Ou vários planos) 📋",
+        author: { name: "Planejamento", description: "Estrategista" }
+    },
+    {
+        quote: "Com essa lista, você vai precisar de um carrinho extra! 🛒",
+        author: { name: "Carrinho", description: "Preocupado" }
+    },
+    {
+        quote: "Você está comprando para o mês inteiro ou para o ano? 📅",
+        author: { name: "Tempo", description: "Confuso" }
+    },
+    {
+        quote: "Lista de compras nível: PROFISSIONAL! 🏆",
+        author: { name: "Sistema", description: "Impressionado" }
+    },
+    {
+        quote: "Seu carrinho está mais completo que um dicionário! 📚",
+        author: { name: "Educação", description: "Comparativa" }
+    },
+    {
+        quote: "Parece que você não vai passar fome! 🍽️",
+        author: { name: "Fome", description: "Aliviada" }
+    },
+    {
+        quote: "Com essa lista, até o caixa vai ficar cansado! 💳",
+        author: { name: "Caixa", description: "Antecipadamente Cansado" }
+    },
+    {
+        quote: "Você está preparando para um apocalipse ou só para o fim de semana? 🌍",
+        author: { name: "Sobrevivência", description: "Preparada" }
+    },
+    {
+        quote: "Lista de compras: Edição ESPECIAL! ⭐",
+        author: { name: "Edição", description: "Especial" }
+    }
+];
+
 export const SummaryFooter: React.FC<SummaryFooterProps> = ({ items, onClearChecked, onUncheckAll }) => {
     const [funnyMessage, setFunnyMessage] = useState<FunnyMessage | null>(null);
     const [lastMessageThreshold, setLastMessageThreshold] = useState<number>(0);
+    const [usedMessages, setUsedMessages] = useState<Set<number>>(new Set());
 
     const { totalCount, totalPrice, hasCheckedItems } = useMemo(() => {
         const total = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
@@ -25,6 +88,27 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({ items, onClearChec
     
     const prevTotalPriceRef = useRef(totalPrice);
 
+    // Função para obter uma mensagem aleatória que ainda não foi usada
+    const getRandomUnusedMessage = () => {
+        const availableMessages = FUNNY_MESSAGES.filter((_, index) => !usedMessages.has(index));
+        
+        // Se todas as mensagens foram usadas, resetar o conjunto
+        if (availableMessages.length === 0) {
+            setUsedMessages(new Set());
+            return FUNNY_MESSAGES[Math.floor(Math.random() * FUNNY_MESSAGES.length)];
+        }
+        
+        // Escolher uma mensagem aleatória das não usadas
+        const randomIndex = Math.floor(Math.random() * availableMessages.length);
+        const selectedMessage = availableMessages[randomIndex];
+        const selectedIndex = FUNNY_MESSAGES.indexOf(selectedMessage);
+        
+        // Marcar como usada
+        setUsedMessages(prev => new Set([...prev, selectedIndex]));
+        
+        return selectedMessage;
+    };
+
     // This effect determines if a message should be shown based on price thresholds
     useEffect(() => {
         const THRESHOLD_START = 300; // R$ 300
@@ -36,9 +120,9 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({ items, onClearChec
             
             // Check if we crossed a new threshold
             if (currentThreshold > lastMessageThreshold && totalPrice > prevTotalPriceRef.current) {
-                // Show a new random message
-                const randomIndex = Math.floor(Math.random() * FUNNY_MESSAGES.length);
-                setFunnyMessage(FUNNY_MESSAGES[randomIndex]);
+                // Show a new random message that hasn't been used recently
+                const newMessage = getRandomUnusedMessage();
+                setFunnyMessage(newMessage);
                 setLastMessageThreshold(currentThreshold);
             }
         } else {
@@ -49,32 +133,39 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({ items, onClearChec
         
         // Always update the ref to the current price for the next render
         prevTotalPriceRef.current = totalPrice;
-    }, [totalPrice, lastMessageThreshold]);
+    }, [totalPrice, lastMessageThreshold, usedMessages]);
 
-    // This effect handles the self-dismiss timer for the message
+    // Auto-dismiss timer
     useEffect(() => {
         if (funnyMessage) {
             const timer = setTimeout(() => {
                 setFunnyMessage(null);
-            }, 60000); // 1 minute timer
+            }, 8000); // 8 seconds
+
             return () => clearTimeout(timer);
         }
     }, [funnyMessage]);
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-        }).format(value);
-    };
+    const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-    const ActionButton: React.FC<{onClick: () => void; disabled: boolean; children: React.ReactNode; label: string; 'aria-label': string; title: string;}> = 
-    ({ onClick, disabled, children, label, ...props }) => (
-         <button
+    const ActionButton: React.FC<{
+        onClick: () => void;
+        disabled: boolean;
+        children: React.ReactNode;
+        'aria-label': string;
+        title: string;
+        label: string;
+    }> = ({ onClick, disabled, children, 'aria-label': ariaLabel, title, label }) => (
+        <button
             onClick={onClick}
             disabled={disabled}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-gray-300 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed enabled:hover:bg-white/10 enabled:hover:text-white enabled:hover:scale-105 active:scale-95"
-            {...props}
+            aria-label={ariaLabel}
+            title={title}
+            className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1.5 ${
+                disabled
+                    ? 'text-gray-500 cursor-not-allowed'
+                    : 'text-gray-300 hover:text-white hover:bg-white/10 active:bg-white/20'
+            }`}
         >
             {children}
             <span className="hidden sm:inline">{label}</span>

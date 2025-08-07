@@ -18,26 +18,40 @@ export function useHistoryState<T>(initialState: T, storageKey: string) {
   
   const [pointer, setPointer] = useState(() => history.length - 1);
 
+  // Save to localStorage whenever history changes
   useEffect(() => {
     // Prevent saving if storageKey is noop (e.g., when no list is active)
     if (storageKey === 'noop') return;
-    window.localStorage.setItem(storageKey, JSON.stringify(history));
+    
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(history));
+    } catch (error) {
+      console.error(`Failed to save history for ${storageKey} to localStorage`, error);
+    }
   }, [history, storageKey]);
 
+  // Load from localStorage when storageKey changes
   useEffect(() => {
-    if (storageKey !== 'noop') {
-        try {
-            const storedHistory = window.localStorage.getItem(storageKey);
-            const parsedHistory = storedHistory ? JSON.parse(storedHistory) : [[]];
-            setHistory(parsedHistory.length > 0 ? parsedHistory : [[]]);
-            setPointer(parsedHistory.length > 0 ? parsedHistory.length - 1 : 0);
-        } catch (e) {
-            console.error(`Failed to load history for ${storageKey}`, e);
-            setHistory([[]] as any);
-            setPointer(0);
+    if (storageKey === 'noop') return;
+    
+    try {
+      const storedHistory = window.localStorage.getItem(storageKey);
+      if (storedHistory) {
+        const parsedHistory = JSON.parse(storedHistory);
+        if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
+          setHistory(parsedHistory);
+          setPointer(parsedHistory.length - 1);
+          return;
         }
+      }
+    } catch (error) {
+      console.error(`Failed to load history for ${storageKey} from localStorage`, error);
     }
-  }, [storageKey]);
+    
+    // If no valid data found, initialize with initialState
+    setHistory([initialState]);
+    setPointer(0);
+  }, [storageKey, initialState]);
 
   const setState = useCallback((newState: T | ((prevState: T) => T), bypass = false) => {
     const resolvedState = typeof newState === 'function' 

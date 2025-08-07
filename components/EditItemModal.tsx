@@ -1,7 +1,7 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { GroceryItem, Category } from '../types';
-import { CloseIcon, TrashIcon, PasteIcon } from './IconComponents';
+import { TrashIcon, PasteIcon, ChevronDownIcon, PlusIcon, MinusIcon } from './IconComponents';
 
 interface EditItemModalProps {
     item: GroceryItem;
@@ -60,56 +60,154 @@ const CurrencyInput: React.FC<{ value: number; onChange: (value: number) => void
     );
 };
 
+const QuantityInput: React.FC<{ value: number; onChange: (value: number) => void; }> = ({ value, onChange }) => {
+    const handleIncrement = () => {
+        onChange(value + 1);
+    };
+
+    const handleDecrement = () => {
+        if (value > 1) {
+            onChange(value - 1);
+        }
+    };
+
+    const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const newValue = parseInt(e.target.value) || 1;
+        onChange(Math.max(1, newValue));
+    };
+
+    return (
+        <div className="flex items-center bg-gray-900/50 border-2 border-white/10 rounded-md overflow-hidden">
+            <button
+                type="button"
+                onClick={handleDecrement}
+                className="p-3 text-gray-400 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
+                disabled={value <= 1}
+            >
+                <MinusIcon className="w-4 h-4" />
+            </button>
+            <input
+                type="number"
+                inputMode="numeric"
+                value={value}
+                onChange={handleInputChange}
+                min="1"
+                className="w-full bg-transparent p-3 text-white text-center focus:outline-none focus:ring-0 border-0"
+            />
+            <button
+                type="button"
+                onClick={handleIncrement}
+                className="p-3 text-gray-400 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
+            >
+                <PlusIcon className="w-4 h-4" />
+            </button>
+        </div>
+    );
+};
+
+const CategorySelect: React.FC<{ value: Category | null; onChange: (category: Category | null) => void; }> = ({ value, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div className="relative">
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full bg-gray-900/50 backdrop-blur-xl border-2 border-white/20 rounded-md p-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 flex items-center justify-between transition-all duration-200 hover:bg-gray-800/50"
+            >
+                <span className={value ? 'text-white' : 'text-gray-400'}>
+                    {value || 'Selecione uma categoria'}
+                </span>
+                <ChevronDownIcon className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute top-full left-0 right-0 mt-1 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-md shadow-2xl z-10 max-h-60 overflow-y-auto"
+                    >
+                        <div className="p-1">
+                            <button
+                                onClick={() => {
+                                    onChange(null);
+                                    setIsOpen(false);
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm text-gray-400 hover:bg-white/10 hover:text-white rounded-md transition-colors"
+                            >
+                                Nenhuma categoria
+                            </button>
+                            {Object.values(Category).map(category => (
+                                <button
+                                    key={category}
+                                    onClick={() => {
+                                        onChange(category);
+                                        setIsOpen(false);
+                                    }}
+                                    className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
+                                        value === category 
+                                            ? 'bg-blue-500/20 text-blue-300' 
+                                            : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                                    }`}
+                                >
+                                    {category}
+                                </button>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
 
 export const EditItemModal: React.FC<EditItemModalProps> = ({ item, onClose, onSave, onDelete }) => {
     const [editedItem, setEditedItem] = useState<GroceryItem>(item);
 
-    useEffect(() => {
-      setEditedItem(item);
-    }, [item]);
-
-    const handleFieldChange = <K extends keyof Omit<GroceryItem, 'id'>>(field: K, value: GroceryItem[K]) => {
+    const handleFieldChange = <K extends keyof GroceryItem>(field: K, value: GroceryItem[K]) => {
         setEditedItem(prev => ({ ...prev, [field]: value }));
     };
 
     const handleSave = () => {
-        // Prevent saving an item with no name if it's new
-        const isNew = !item.name;
-        if (isNew && !editedItem.name.trim()) {
-            onClose(); // Just close if no name entered for a new item.
-            return;
+        if (editedItem.name.trim()) {
+            onSave(editedItem);
         }
-        onSave(editedItem);
     };
 
     const handleDelete = () => {
-        if (window.confirm(`Tem certeza que deseja excluir "${editedItem.name || 'este item'}"?`)) {
-            onDelete(editedItem.id);
-        }
+        onDelete(item.id);
     };
-    
+
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 flex items-center justify-center z-40"
-            onClick={handleSave} // Save on clicking away
-        >
+        <AnimatePresence>
             <motion.div
-                initial={{ y: "100%", opacity: 0.8 }}
-                animate={{ y: "0%", opacity: 1 }}
-                exit={{ y: "100%", opacity: 0.8 }}
-                transition={{ type: 'spring', damping: 30, stiffness: 250 }}
-                className="bg-gray-800/60 backdrop-blur-xl border border-white/10 w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] rounded-t-2xl md:rounded-2xl flex flex-col shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                onClick={onClose}
             >
-                <header className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
-                    <h2 className="text-xl font-bold text-white">{item.name ? 'Editar Item' : 'Novo Item'}</h2>
-                    <button onClick={handleSave} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full">
-                        <CloseIcon />
-                    </button>
-                </header>
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    className="bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-lg shadow-2xl w-full max-w-md mx-4 max-h-[90vh] flex flex-col"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10">
+                        <h2 className="text-xl font-bold text-white">Editar Item</h2>
+                        <button
+                            onClick={handleDelete}
+                            className="p-2 text-red-400 hover:bg-red-500/20 rounded-full transition-colors"
+                            aria-label="Excluir item"
+                        >
+                            <TrashIcon className="w-5 h-5" />
+                        </button>
+                    </div>
 
                 <main className="p-4 sm:p-6 space-y-6 overflow-y-auto">
                     <div>
@@ -145,14 +243,7 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({ item, onClose, onS
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="quantity" className="block text-sm font-medium text-gray-300 mb-1">Quantidade</label>
-                            <input
-                                id="quantity"
-                                type="number"
-                                inputMode="numeric"
-                                value={editedItem.quantity}
-                                onChange={(e) => handleFieldChange('quantity', parseInt(e.target.value) || 1)}
-                                className="w-full bg-gray-900/50 border-2 border-white/10 rounded-md p-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            />
+                            <QuantityInput value={editedItem.quantity} onChange={(val) => handleFieldChange('quantity', val)} />
                         </div>
                          <div>
                             <label htmlFor="unitPrice" className="block text-sm font-medium text-gray-300 mb-1">Preço Unitário (R$)</label>
@@ -160,19 +251,12 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({ item, onClose, onS
                         </div>
                     </div>
 
-                     <div>
-                        <label htmlFor="category" className="block text-sm font-medium text-gray-300 mb-1">Categoria</label>
-                        <select
-                            id="category"
-                            value={editedItem.category || ''}
-                            onChange={(e) => handleFieldChange('category', e.target.value as Category)}
-                            className="w-full bg-gray-900/50 border-2 border-white/10 rounded-md p-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                            <option value="" disabled>Selecione uma categoria</option>
-                            {Object.values(Category).map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                        </select>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Categoria</label>
+                        <CategorySelect 
+                            value={editedItem.category} 
+                            onChange={(category) => handleFieldChange('category', category)} 
+                        />
                     </div>
                      <div className="flex items-center justify-between bg-gray-900/50 border-2 border-white/10 rounded-md p-3">
                         <label htmlFor="checked" className="font-medium text-white cursor-pointer">
@@ -198,5 +282,6 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({ item, onClose, onS
                 </footer>
             </motion.div>
         </motion.div>
+    </AnimatePresence>
     );
 };
