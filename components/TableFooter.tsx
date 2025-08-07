@@ -12,6 +12,7 @@ interface SummaryFooterProps {
 
 export const SummaryFooter: React.FC<SummaryFooterProps> = ({ items, onClearChecked, onUncheckAll }) => {
     const [funnyMessage, setFunnyMessage] = useState<FunnyMessage | null>(null);
+    const [lastMessageThreshold, setLastMessageThreshold] = useState<number>(0);
 
     const { totalCount, totalPrice, hasCheckedItems } = useMemo(() => {
         const total = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
@@ -24,19 +25,31 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({ items, onClearChec
     
     const prevTotalPriceRef = useRef(totalPrice);
 
-    // This effect determines if a message should be shown or hidden based on price
+    // This effect determines if a message should be shown based on price thresholds
     useEffect(() => {
-        if (totalPrice > 400 && prevTotalPriceRef.current <= 400) {
-            // Crossed the threshold upwards, show a new message
-            const randomIndex = Math.floor(Math.random() * FUNNY_MESSAGES.length);
-            setFunnyMessage(FUNNY_MESSAGES[randomIndex]);
-        } else if (totalPrice <= 400) {
-            // Dropped below or is at threshold, hide message
+        const THRESHOLD_START = 300; // R$ 300
+        const THRESHOLD_INCREMENT = 100; // R$ 100
+        
+        if (totalPrice >= THRESHOLD_START) {
+            // Calculate the current threshold level
+            const currentThreshold = Math.floor((totalPrice - THRESHOLD_START) / THRESHOLD_INCREMENT) * THRESHOLD_INCREMENT + THRESHOLD_START;
+            
+            // Check if we crossed a new threshold
+            if (currentThreshold > lastMessageThreshold && totalPrice > prevTotalPriceRef.current) {
+                // Show a new random message
+                const randomIndex = Math.floor(Math.random() * FUNNY_MESSAGES.length);
+                setFunnyMessage(FUNNY_MESSAGES[randomIndex]);
+                setLastMessageThreshold(currentThreshold);
+            }
+        } else {
+            // Below threshold, hide message and reset threshold
             setFunnyMessage(null);
+            setLastMessageThreshold(0);
         }
+        
         // Always update the ref to the current price for the next render
         prevTotalPriceRef.current = totalPrice;
-    }, [totalPrice]);
+    }, [totalPrice, lastMessageThreshold]);
 
     // This effect handles the self-dismiss timer for the message
     useEffect(() => {
