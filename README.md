@@ -9,7 +9,7 @@
 
 **Uma aplicação moderna e inteligente para gerenciar suas listas de compras com interface elegante e funcionalidades avançadas.**
 
-[🌐 **Demo Online**](https://mercado-app.vercel.app) • [📱 **Funcionalidades**](#-funcionalidades) • [🚀 **Tecnologias**](#-tecnologias)
+[🌐 **Demo Online**](https://mercado-ebon-kappa.vercel.app) • [📱 **Funcionalidades**](#-funcionalidades) • [🚀 **Tecnologias**](#-tecnologias)
 
 </div>
 
