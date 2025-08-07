@@ -16,6 +16,7 @@ import { ListManagerModal } from './components/ListManagerModal';
 import { CategoryFilter } from './components/CategoryFilter';
 import { ShareModal } from './components/ShareModal';
 import { Fireworks } from './components/Fireworks';
+import { AdvancedOptionsModal } from './components/AdvancedOptionsModal';
 
 const APP_DATA_KEY = 'grocery-app-data-v2';
 
@@ -32,6 +33,7 @@ const App: React.FC = () => {
   const [isImportModalOpen, setImportModalOpen] = useState(false);
   const [isListManagerOpen, setListManagerOpen] = useState(false);
   const [isShareModalOpen, setShareModalOpen] = useState(false);
+  const [isAdvancedOptionsOpen, setAdvancedOptionsOpen] = useState(false);
   const [toast, setToast] = useState<{ id: number, message: string } | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -86,10 +88,44 @@ const App: React.FC = () => {
     }
   }, [items]);
 
-
   const showToast = useCallback((message: string) => {
     setToast({ id: Date.now(), message });
   }, []);
+
+  // Função para reset completo do app
+  const handleResetApp = useCallback(() => {
+    // Limpar todos os dados do localStorage
+    const keysToRemove: string[] = [];
+    
+    // Adicionar chaves de listas existentes
+    lists.forEach(list => {
+      keysToRemove.push(`grocery-list-history-${list.id}`);
+    });
+    
+    // Adicionar chave principal
+    keysToRemove.push(APP_DATA_KEY);
+    
+    // Remover todas as chaves
+    keysToRemove.forEach(key => {
+      window.localStorage.removeItem(key);
+    });
+    
+    // Recriar lista inicial
+    const firstListId = crypto.randomUUID();
+    const firstList: GroceryListInfo = {
+      id: firstListId,
+      name: 'Minha Lista de Compras',
+      createdAt: new Date().toISOString(),
+    };
+    const historyKey = `grocery-list-history-${firstListId}`;
+    window.localStorage.setItem(historyKey, JSON.stringify([INITIAL_ITEMS]));
+
+    setLists([firstList]);
+    setActiveListId(firstListId);
+    setState([INITIAL_ITEMS]);
+    
+    showToast('App resetado com sucesso!');
+  }, [lists, setState, showToast]);
 
   const handleSaveItem = useCallback((itemToSave: GroceryItem) => {
     const itemExists = items.some(i => i.id === itemToSave.id);
@@ -117,135 +153,135 @@ const App: React.FC = () => {
   
   const handleDeleteItem = useCallback((id: string) => {
     setState(prevItems => prevItems.filter(item => item.id !== id));
-    showToast('Item excluído.');
-    setEditingItem(null);
+    showToast('Item removido.');
   }, [setState, showToast]);
 
-  const handleToggleChecked = useCallback((id: string, forceState?: boolean) => {
-    let message = '';
-    setState(prevItems => {
-        const newItems = prevItems.map(i => {
-            if (i.id === id) {
-                const isChecked = typeof forceState === 'boolean' ? forceState : !i.checked;
-                message = isChecked ? 'Item marcado como comprado.' : 'Item movido para a lista.';
-                return { ...i, checked: isChecked };
-            }
-            return i;
-        });
-        return newItems;
-    });
-    if (message) showToast(message);
-  }, [setState, showToast]);
+  const handleToggleChecked = useCallback((id: string) => {
+    setState(prevItems => prevItems.map(item => 
+      item.id === id ? { ...item, checked: !item.checked } : item
+    ));
+  }, [setState]);
+
+  const handleReorderItems = useCallback((reorderedItems: GroceryItem[]) => {
+    setState(reorderedItems);
+  }, [setState]);
 
   const handleClearChecked = useCallback(() => {
-    if (window.confirm("Tem certeza que deseja remover todos os itens comprados? Esta ação não pode ser desfeita.")) {
-      setState(prevItems => prevItems.filter(item => !item.checked), true); // Bypassing history for this action
-      showToast('Itens comprados removidos.');
-    }
+    setState(prevItems => prevItems.filter(item => !item.checked));
+    showToast('Itens comprados removidos.');
   }, [setState, showToast]);
-  
+
   const handleUncheckAll = useCallback(() => {
-    setState(prevItems => prevItems.map(item => ({...item, checked: false})));
-    showToast('Todos os itens marcados como pendentes.');
+    setState(prevItems => prevItems.map(item => ({ ...item, checked: false })));
+    showToast('Todos os itens desmarcados.');
+  }, [setState, showToast]);
+
+  const handleClearList = useCallback(() => {
+    setState([]);
+    showToast('Lista limpa.');
   }, [setState, showToast]);
 
   const handleResetPrices = useCallback(() => {
-    if (window.confirm("Tem certeza que deseja zerar todos os preços? Esta ação redefine os preços de todos os itens para R$ 0,00.")) {
-        setState(prevItems => prevItems.map(item => ({ ...item, unitPrice: 0 })));
-        showToast('Todos os preços foram zerados.');
-    }
-  }, [setState, showToast]);
-  
-  const handleClearList = useCallback(() => {
-    if (window.confirm("Tem certeza que deseja limpar todos os itens desta lista? Esta ação não pode ser desfeita.")) {
-        setState([], true); // Bypass history
-        showToast('Lista limpa.');
-    }
+    setState(prevItems => prevItems.map(item => ({ ...item, unitPrice: 0 })));
+    showToast('Preços zerados.');
   }, [setState, showToast]);
 
   const handleImportList = useCallback((importedItems: GroceryItem[]) => {
-    setState(prevItems => [...importedItems, ...prevItems]);
-    showToast(`${importedItems.length} itens importados.`);
+    setState(importedItems);
+    showToast('Lista importada com sucesso!');
     setImportModalOpen(false);
   }, [setState, showToast]);
 
-  const handleToggleCategoryFilter = (category: Category) => {
-    setSelectedCategories(prev =>
-      prev.includes(category)
+  const handleToggleCategoryFilter = useCallback((category: Category) => {
+    setSelectedCategories(prev => 
+      prev.includes(category) 
         ? prev.filter(c => c !== category)
         : [...prev, category]
     );
-  };
+  }, []);
 
-  const filteredItems = useMemo(() => {
-    return items
-      .filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
-      .filter(item => selectedCategories.length === 0 || (item.category && selectedCategories.includes(item.category)));
-  }, [items, searchQuery, selectedCategories]);
-
-  const sortedItems = useMemo(() => {
-    return [...filteredItems].sort((a, b) => {
-      if (a.checked !== b.checked) return a.checked ? 1 : -1;
-      return 0; // Preserve manual order
-    });
-  }, [filteredItems]);
-
-  const showNoResultsMessage = useMemo(() => {
-      const isFilterActive = searchQuery.length > 0 || selectedCategories.length > 0;
-      return isFilterActive && sortedItems.length === 0 && items.length > 0;
-  }, [searchQuery, selectedCategories, sortedItems, items]);
-  
-  const handleReorderItems = useCallback((reorderedItems: GroceryItem[]) => {
-      setState(reorderedItems);
-      showToast('Ordem da lista atualizada.');
-  }, [setState, showToast]);
-  
-  // List Management Handlers
-  const handleCreateList = (name: string) => {
-    const newId = crypto.randomUUID();
+  const handleCreateList = useCallback((name: string) => {
+    const newListId = crypto.randomUUID();
     const newList: GroceryListInfo = {
-      id: newId,
+      id: newListId,
       name,
       createdAt: new Date().toISOString(),
     };
     setLists(prev => [...prev, newList]);
-    setActiveListId(newId);
-    showToast(`Lista "${name}" criada.`);
-    setListManagerOpen(false);
-  };
+    setActiveListId(newListId);
+    setState([]);
+    showToast('Nova lista criada.');
+  }, [setState, showToast]);
 
-  const handleRenameList = (id: string, newName: string) => {
-    setLists(prev => prev.map(list => list.id === id ? { ...list, name: newName } : list));
+  const handleRenameList = useCallback((id: string, newName: string) => {
+    setLists(prev => prev.map(list => 
+      list.id === id ? { ...list, name: newName } : list
+    ));
     showToast('Lista renomeada.');
-  };
-  
-  const handleRenameActiveList = (newName: string) => {
+  }, [showToast]);
+
+  const handleRenameActiveList = useCallback((newName: string) => {
     if (activeListId) {
-        handleRenameList(activeListId, newName);
+      handleRenameList(activeListId, newName);
     }
-  };
+  }, [activeListId, handleRenameList]);
 
-  const handleDeleteList = (id: string) => {
-    if (!window.confirm("Tem certeza que deseja excluir esta lista? Esta ação é permanente.")) return;
-    const listsAfterDeletion = lists.filter(list => list.id !== id);
-    setLists(listsAfterDeletion);
-
+  const handleDeleteList = useCallback((id: string) => {
+    setLists(prev => prev.filter(list => list.id !== id));
     if (activeListId === id) {
-      if (listsAfterDeletion.length > 0) {
-        setActiveListId(listsAfterDeletion[0].id);
+      const remainingLists = lists.filter(list => list.id !== id);
+      if (remainingLists.length > 0) {
+        setActiveListId(remainingLists[0].id);
       } else {
-        const firstListId = crypto.randomUUID();
-        const firstList: GroceryListInfo = { id: firstListId, name: 'Minha Lista de Compras', createdAt: new Date().toISOString() };
-        setLists([firstList]);
-        setActiveListId(firstListId);
-        window.localStorage.setItem(`grocery-list-history-${firstListId}`, JSON.stringify([[]]));
+        // Se não há mais listas, criar uma nova
+        const newListId = crypto.randomUUID();
+        const newList: GroceryListInfo = {
+          id: newListId,
+          name: 'Minha Lista de Compras',
+          createdAt: new Date().toISOString(),
+        };
+        setLists([newList]);
+        setActiveListId(newListId);
+        setState([INITIAL_ITEMS]);
       }
     }
-    window.localStorage.removeItem(`grocery-list-history-${id}`);
-    showToast('Lista excluída.');
-  };
+    showToast('Lista removida.');
+  }, [activeListId, lists, setState, showToast]);
 
-  const activeList = useMemo(() => lists.find(l => l.id === activeListId), [lists, activeListId]);
+  const activeList = useMemo(() => 
+    lists.find(list => list.id === activeListId), 
+    [lists, activeListId]
+  );
+
+  const filteredItems = useMemo(() => {
+    let filtered = items;
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(item => 
+        item.name.toLowerCase().includes(query)
+      );
+    }
+    
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter(item => 
+        item.category && selectedCategories.includes(item.category)
+      );
+    }
+    
+    return filtered;
+  }, [items, searchQuery, selectedCategories]);
+
+  const sortedItems = useMemo(() => {
+    return [...filteredItems].sort((a, b) => {
+      if (a.checked !== b.checked) {
+        return a.checked ? 1 : -1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+  }, [filteredItems]);
+
+  const showNoResultsMessage = searchQuery || selectedCategories.length > 0;
 
   return (
     <InteractiveBackground mood={isCelebration ? 'celebration' : 'default'}>
@@ -265,6 +301,7 @@ const App: React.FC = () => {
             onSearchQueryChange={setSearchQuery}
             onClearList={handleClearList}
             onRenameList={handleRenameActiveList}
+            onOpenAdvancedOptions={() => setAdvancedOptionsOpen(true)}
           />
           <div className="px-2 sm:px-4 lg:px-0">
             <CategoryFilter selectedCategories={selectedCategories} onToggleCategory={handleToggleCategoryFilter} />
@@ -329,6 +366,15 @@ const App: React.FC = () => {
               onCreateList={handleCreateList}
               onRenameList={handleRenameList}
               onDeleteList={handleDeleteList}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isAdvancedOptionsOpen && (
+            <AdvancedOptionsModal
+              onClose={() => setAdvancedOptionsOpen(false)}
+              onResetApp={handleResetApp}
             />
           )}
         </AnimatePresence>

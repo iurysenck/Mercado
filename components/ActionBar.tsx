@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { UndoIcon, RedoIcon, MoreVerticalIcon, UploadIcon, ResetIcon, ListBulletIcon, SearchIcon, BroomIcon, PasteIcon, ShareIcon } from './IconComponents';
+import React, { useState } from 'react';
+import { 
+    UndoIcon, RedoIcon, MoreVerticalIcon, SearchIcon, PasteIcon, 
+    UploadIcon, ShareIcon, ResetIcon, BroomIcon, ListBulletIcon,
+    CogIcon
+} from './IconComponents';
 
 interface ActionBarProps {
     listName: string;
@@ -15,31 +19,30 @@ interface ActionBarProps {
     onSearchQueryChange: (query: string) => void;
     onClearList: () => void;
     onRenameList: (newName: string) => void;
+    onOpenAdvancedOptions: () => void;
 }
 
 export const ActionBar: React.FC<ActionBarProps> = ({ 
     listName, onUndo, onRedo, canUndo, canRedo, onOpenImport, onOpenShare, onResetPrices, onOpenListManager,
-    searchQuery, onSearchQueryChange, onClearList, onRenameList
+    searchQuery, onSearchQueryChange, onClearList, onRenameList, onOpenAdvancedOptions
 }) => {
-    const buttonClass = "p-2 rounded-md transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed";
-    const enabledClass = "hover:bg-white/20";
-    
     const [isEditing, setIsEditing] = useState(false);
     const [editingValue, setEditingValue] = useState(listName);
 
-    useEffect(() => {
-        setEditingValue(listName);
-    }, [listName]);
+    const buttonClass = "p-2 rounded-md transition-colors";
+    const enabledClass = "hover:bg-white/20 active:bg-white/30";
 
     const handleRename = () => {
-        if (editingValue.trim() && editingValue !== listName) {
+        if (editingValue.trim()) {
             onRenameList(editingValue.trim());
+        } else {
+            setEditingValue(listName);
         }
         setIsEditing(false);
     };
 
     return (
-        <header className="sticky top-0 z-20 bg-gray-950/70 backdrop-blur-lg px-4 pt-5 pb-3 flex flex-col gap-3">
+        <header className="bg-gray-900/50 backdrop-blur-xl border-b border-white/10 p-4 space-y-4">
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                     <button onClick={onOpenListManager} className={`${buttonClass} bg-white/10 ${enabledClass}`} aria-label="Gerenciar listas">
@@ -102,6 +105,11 @@ export const ActionBar: React.FC<ActionBarProps> = ({
                                      <button onClick={onClearList} className="w-full text-left flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-md transition-colors">
                                         <BroomIcon className="w-4 h-4" />
                                         <span>Limpar Todos os Itens</span>
+                                    </button>
+                                    <div className="border-t border-white/10 my-1"></div>
+                                    <button onClick={onOpenAdvancedOptions} className="w-full text-left flex items-center gap-3 px-3 py-2 text-sm text-gray-200 hover:bg-white/10 rounded-md transition-colors">
+                                        <CogIcon className="w-4 h-4" />
+                                        <span>Opções Avançadas...</span>
                                     </button>
                                 </div>
                             </div>
