@@ -1,4 +1,4 @@
-# 🛒 Mercado - Lista de Compras Inteligente
+# 🛒 Mercado - Lista de Compras
 
 <div align="center">
 
@@ -7,7 +7,7 @@
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
-**Uma aplicação moderna e inteligente para gerenciar suas listas de compras com interface elegante e funcionalidades avançadas.**
+**Uma aplicação moderna para gerenciar suas listas de compras com interface elegante e funcionalidades avançadas.**
 
 [🌐 **Demo Online**](https://mercado-ebon-kappa.vercel.app) • [📱 **Funcionalidades**](#-funcionalidades) • [🚀 **Tecnologias**](#-tecnologias)
 
@@ -20,8 +20,8 @@
 ### 🛍️ **Gestão de Listas**
 - ✅ Criar e gerenciar múltiplas listas de compras
 - ✅ Adicionar, editar e remover itens dinamicamente
-- ✅ Categorização automática de produtos
-- ✅ Sistema de busca inteligente
+- ✅ Categorização de produtos
+- ✅ Sistema de busca
 
 ### 💰 **Controle Financeiro**
 - ✅ Cálculo automático de preços
@@ -77,15 +77,13 @@
 
 ## 📱 Funcionalidades Especiais
 
-
-
 ### 🎨 Background Interativo
 - Fundo dinâmico que muda conforme o estado
 - Modo celebração quando lista é completada
 - Efeitos visuais responsivos
 
 ### 📊 Sistema de Categorias
-- Categorização automática de produtos
+- Categorização de produtos
 - Filtros por categoria
 - Tags visuais para cada categoria
 
@@ -133,8 +131,6 @@ Mercado/
 ├── hooks/              # Custom hooks
 │   ├── useHaptics.ts  # Feedback háptico
 │   └── useHistoryState.ts # Histórico undo/redo
-├── services/           # Serviços externos
-│   └── geminiService.ts # Integração com IA
 ├── scripts/            # Scripts de automação
 ├── types.ts            # Definições de tipos
 ├── constants.ts        # Constantes da aplicação
@@ -193,3 +189,11 @@ Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE) par
 [![GitHub stars](https://img.shields.io/github/stars/iurysenck/Mercado?style=social)](https://github.com/iurysenck/Mercado/stargazers)
 
 </div>
+
+---
+
+<div align="center" style="margin-top: 2rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.85rem; color: #888;">
+
+**😄 Disclaimer Humorado:** As frases engraçadas que aparecem no app são pura ficção e diversão! Nenhuma pessoa real foi consultada na criação dessas pérolas de sabedoria gastronômica. Se você se identificar com alguma frase, parabéns pela coincidência cósmica! 🌟
+
+</div> 
