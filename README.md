@@ -194,6 +194,6 @@ Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE) par
 
 <div align="center" style="margin-top: 2rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.85rem; color: #888;">
 
-**😄 Disclaimer Humorado:** As frases engraçadas que aparecem no app são pura ficção e diversão! Nenhuma pessoa real foi consultada na criação dessas pérolas de sabedoria gastronômica. Se você se identificar com alguma frase, parabéns pela coincidência cósmica! 🌟
+**😄 Disclaimer:** As frases engraçadas que aparecem no app são pura ficção! Nenhuma pessoa real foi consultada na criação dessas pérolas.
 
 </div> 
