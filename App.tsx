@@ -269,7 +269,7 @@ const App: React.FC = () => {
           <div className="px-2 sm:px-4 lg:px-0">
             <CategoryFilter selectedCategories={selectedCategories} onToggleCategory={handleToggleCategoryFilter} />
           </div>
-          <main className="px-2 sm:px-4 lg:px-0 pb-36 flex-grow">
+          <main className="px-2 sm:px-4 lg:px-0 pb-32 flex-grow">
               <GroceryList 
                   items={sortedItems}
                   onToggleChecked={handleToggleChecked}
@@ -283,7 +283,7 @@ const App: React.FC = () => {
         
         <button 
           onClick={handleAddItem} 
-          className="fixed bottom-24 right-4 z-30 bg-blue-600 hover:bg-blue-500 text-white rounded-full p-4 shadow-lg transition-transform transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500"
+          className="fixed bottom-20 right-4 z-30 bg-blue-600 hover:bg-blue-500 text-white rounded-full p-4 shadow-lg transition-transform transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500"
           aria-label="Adicionar novo item"
         >
           <PlusIcon className="w-6 h-6" />

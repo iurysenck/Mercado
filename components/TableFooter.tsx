@@ -60,16 +60,16 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({ items, onClearChec
          <button
             onClick={onClick}
             disabled={disabled}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed enabled:hover:bg-white/10 enabled:hover:text-white"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-gray-300 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed enabled:hover:bg-white/10 enabled:hover:text-white enabled:hover:scale-105 active:scale-95"
             {...props}
         >
             {children}
-            <span>{label}</span>
+            <span className="hidden sm:inline">{label}</span>
         </button>
     );
 
     return (
-        <footer className="fixed bottom-0 left-0 right-0 bg-gray-950/70 backdrop-blur-lg border-t border-white/10 p-3 z-20">
+        <footer className="fixed bottom-0 left-0 right-0 bg-gray-950/80 backdrop-blur-xl border-t border-white/10 p-2 z-20">
             <div className="max-w-2xl mx-auto grid grid-cols-3 items-center text-sm font-medium text-gray-300 px-1">
                 <div className="flex items-center gap-1 justify-start">
                      <ActionButton
@@ -77,37 +77,38 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({ items, onClearChec
                         disabled={!hasCheckedItems}
                         aria-label="Limpar itens comprados"
                         title="Limpar Comprados"
-                        label="Limpar Comprados"
+                        label="Limpar"
                     >
-                        <BroomIcon className="w-4 h-4"/>
+                        <BroomIcon className="w-3.5 h-3.5"/>
                     </ActionButton>
                      <ActionButton
                         onClick={onUncheckAll}
                         disabled={!hasCheckedItems}
                         aria-label="Devolver itens para a lista"
                         title="Desmarcar Todos"
-                        label="Desmarcar Todos"
+                        label="Desmarcar"
                     >
-                       <ArrowUturnLeftIcon className="w-4 h-4"/>
+                       <ArrowUturnLeftIcon className="w-3.5 h-3.5"/>
                     </ActionButton>
                 </div>
 
                 <div 
-                    className="text-center cursor-pointer min-h-[40px] flex items-center justify-center px-2"
+                    className="text-center cursor-pointer min-h-[32px] flex items-center justify-center px-2"
                     onClick={() => setFunnyMessage(null)}
                 >
                     <AnimatePresence>
                         {funnyMessage && (
                             <motion.div
-                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                initial={{ opacity: 0, y: 8, scale: 0.95 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                                transition={{ duration: 0.4, ease: "circOut" }}
+                                exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                                transition={{ duration: 0.3, ease: "circOut" }}
+                                className="max-w-xs"
                             >
-                                <p className="font-serif italic text-base md:text-lg text-white">
+                                <p className="font-serif italic text-sm md:text-base text-white leading-tight">
                                     "{funnyMessage.quote}"
                                 </p>
-                                <p className="text-xs text-gray-400 mt-1 font-sans not-italic">
+                                <p className="text-xs text-gray-400 mt-0.5 font-sans not-italic">
                                     - {funnyMessage.author.name} <span className="text-gray-500">({funnyMessage.author.description})</span>
                                 </p>
                             </motion.div>
@@ -116,9 +117,9 @@ export const SummaryFooter: React.FC<SummaryFooterProps> = ({ items, onClearChec
                 </div>
                 
                 <div className="flex flex-col items-end justify-self-end">
-                    <div className="flex items-baseline gap-3 text-right">
+                    <div className="flex items-baseline gap-2 text-right">
                         <span className="text-xs text-gray-400">ITENS: <span className="font-bold text-gray-200 tabular-nums">{totalCount}</span></span>
-                        <span className="text-lg font-bold text-white tabular-nums">{formatCurrency(totalPrice)}</span>
+                        <span className="text-base font-bold text-white tabular-nums">{formatCurrency(totalPrice)}</span>
                     </div>
                 </div>
             </div>
