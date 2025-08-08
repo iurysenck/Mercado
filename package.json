@@ -13,9 +13,8 @@
     "react-dom": "^19.1.1",
     "framer-motion": "^11.3.11",
     "lucide-react": "^0.414.0",
-    "firebase": "^12.1.0",
-    "@firebase/app": "^0.14.1",
-    "@firebase/firestore": "^4.9.0"
+    "@firebase/firestore": "^4.9.0",
+    "@firebase/app": "^0.14.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

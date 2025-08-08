@@ -16,7 +16,6 @@ export interface GroceryListInfo {
   id: string;
   name: string;
   createdAt: string;
-  source: 'local' | 'cloud';
 }
 
 export interface FunnyMessage {

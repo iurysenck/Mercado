@@ -1,7 +1,9 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GroceryItem, Category } from '../types';
 import { CloseIcon, UploadIcon, PasteIcon } from './IconComponents';
+import { useModal } from '../hooks/useModal';
 
 interface ImportModalProps {
     onClose: () => void;
@@ -45,6 +47,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport }) =
     const [activeTab, setActiveTab] = useState<Tab>('text');
     const [inputValue, setInputValue] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const { showConfirmation } = useModal();
 
     useEffect(() => {
         setInputValue('');
@@ -116,7 +119,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport }) =
         } catch (err) {
             console.error('Failed to read clipboard contents: ', err);
             setError('Falha ao colar da área de transferência. Por favor, cole manualmente ou verifique as permissões do navegador.');
-            alert('Não foi possível ler da área de transferência. Verifique as permissões do seu navegador.');
+            showConfirmation({
+                title: 'Erro ao Colar',
+                message: 'Não foi possível ler da área de transferência. Verifique as permissões do seu navegador.',
+                confirmText: 'OK',
+                cancelText: null,
+                variant: 'danger',
+            });
         }
     };
     

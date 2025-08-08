@@ -37,9 +37,9 @@ export const Toast: React.FC<ToastProps> = ({ message, onDismiss, isFunnyMessage
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-            className={`fixed ${toastPositionClass} left-1/2 -translate-x-1/2 z-50`}
+            className={`fixed ${toastPositionClass} inset-x-0 z-50 flex justify-center pointer-events-none`}
         >
-            <div className="bg-gray-900/60 backdrop-blur-md border border-white/10 text-white rounded-full shadow-lg flex items-center justify-between py-2 px-4">
+            <div className="bg-gray-900/60 backdrop-blur-md border border-white/10 text-white rounded-full shadow-lg flex items-center justify-between py-2 px-4 pointer-events-auto">
                 <span className="text-sm font-medium">{message}</span>
                 {canUndo && onUndo && (
                     <>

@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+
+
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GroceryItem, Category } from '../types';
 import { CloseIcon, TrashIcon, PasteIcon, MinusIcon, PlusIcon, ChevronLeftIcon, ChevronRightIcon, PaletteIcon } from './IconComponents';
 import { getCategoryStyle } from '../constants';
 import { ColorPalettePicker } from './ColorPalettePicker';
+import { useModal } from '../hooks/useModal';
 
 interface CurrencyInputProps {
     value: number;
@@ -53,8 +56,11 @@ interface EditItemModalProps {
 export const EditItemModal: React.FC<EditItemModalProps> = ({ item, onClose, onSave, onDelete, availableCategories }) => {
     const [editedItem, setEditedItem] = useState<GroceryItem>(item);
     const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+    const { showConfirmation } = useModal();
     
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [showLeftArrow, setShowLeftArrow] = useState(false);
+    const [showRightArrow, setShowRightArrow] = useState(false);
 
     useEffect(() => {
       setEditedItem(item);
@@ -73,9 +79,16 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({ item, onClose, onS
         onSave({...editedItem, category: editedItem.category?.trim().toUpperCase() || null });
     };
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (!item.id.startsWith('new-')) {
-            if (window.confirm(`Tem certeza que deseja excluir "${editedItem.name || 'este item'}"?`)) {
+            const confirmed = await showConfirmation({
+                title: 'Excluir Item',
+                message: `Tem certeza que deseja excluir "${editedItem.name || 'este item'}"?`,
+                confirmText: 'Excluir',
+                cancelText: 'Cancelar',
+                variant: 'danger'
+            });
+            if (confirmed) {
                 onDelete(editedItem.id);
             }
         }
@@ -86,6 +99,40 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({ item, onClose, onS
     }
     
     const categoryStyle = getCategoryStyle(editedItem.category);
+
+    const checkScroll = useCallback(() => {
+        const el = scrollContainerRef.current;
+        if (el) {
+            const hasOverflow = el.scrollWidth > el.clientWidth;
+            const scrollBuffer = 2; // to account for sub-pixel rendering issues
+            setShowLeftArrow(hasOverflow && el.scrollLeft > scrollBuffer);
+            setShowRightArrow(hasOverflow && el.scrollLeft < el.scrollWidth - el.clientWidth - scrollBuffer);
+        }
+    }, []);
+
+    useEffect(() => {
+        const el = scrollContainerRef.current;
+        if (el) {
+            checkScroll();
+            el.addEventListener('scroll', checkScroll, { passive: true });
+            window.addEventListener('resize', checkScroll);
+            const observer = new MutationObserver(checkScroll);
+            observer.observe(el, { childList: true, subtree: true });
+            return () => {
+                el.removeEventListener('scroll', checkScroll);
+                window.removeEventListener('resize', checkScroll);
+                observer.disconnect();
+            };
+        }
+    }, [availableCategories, checkScroll]);
+
+    const scroll = (direction: 'left' | 'right') => {
+        const el = scrollContainerRef.current;
+        if (el) {
+            const scrollAmount = el.clientWidth * 0.8;
+            el.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+        }
+    };
 
     return (
         <motion.div
@@ -121,7 +168,6 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({ item, onClose, onS
                                 onChange={(e) => handleFieldChange('name', e.target.value)}
                                 placeholder="Ex: Bananas Orgânicas"
                                 className="w-full bg-gray-800/60 backdrop-blur-xl border border-white/10 rounded-md p-3 pr-16 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                autoFocus
                             />
                              <button
                                 type="button"
@@ -130,7 +176,13 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({ item, onClose, onS
                                         const text = await navigator.clipboard.readText();
                                         handleFieldChange('name', text);
                                     } catch (err) {
-                                        alert('Não foi possível ler da área de transferência. Verifique as permissões do seu navegador.');
+                                        showConfirmation({
+                                            title: 'Erro ao Colar',
+                                            message: 'Não foi possível ler da área de transferência. Verifique as permissões do seu navegador.',
+                                            confirmText: 'OK',
+                                            cancelText: null,
+                                            variant: 'danger',
+                                        });
                                         console.error('Failed to paste from clipboard', err);
                                     }
                                 }}
@@ -216,10 +268,24 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({ item, onClose, onS
                         </datalist>
                         
                         {availableCategories.length > 0 && (
-                             <div className="relative mt-3">
+                            <div className="relative mt-3">
+                                <AnimatePresence>
+                                {showLeftArrow && (
+                                    <motion.button
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        onClick={() => scroll('left')}
+                                        className="absolute left-0 -translate-x-1 top-1/2 -translate-y-1/2 z-10 h-full px-2 bg-gradient-to-r from-gray-800 via-gray-800 to-transparent flex items-center"
+                                        aria-label="Rolar categorias para a esquerda"
+                                    >
+                                        <ChevronLeftIcon className="w-6 h-6 text-white bg-black/40 rounded-full p-0.5" />
+                                    </motion.button>
+                                )}
+                                </AnimatePresence>
                                 <div 
                                     ref={scrollContainerRef} 
-                                    className="flex items-center gap-2 overflow-x-auto py-1 -my-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                    className="flex items-center gap-2 overflow-x-auto py-1 -my-1 mx-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                                 >
                                     {availableCategories.map(cat => (
                                     <button
@@ -236,6 +302,20 @@ export const EditItemModal: React.FC<EditItemModalProps> = ({ item, onClose, onS
                                     </button>
                                     ))}
                                 </div>
+                                <AnimatePresence>
+                                {showRightArrow && (
+                                    <motion.button
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        onClick={() => scroll('right')}
+                                        className="absolute right-0 translate-x-1 top-1/2 -translate-y-1/2 z-10 h-full px-2 bg-gradient-to-l from-gray-800 via-gray-800 to-transparent flex items-center"
+                                        aria-label="Rolar categorias para a direita"
+                                    >
+                                        <ChevronRightIcon className="w-6 h-6 text-white bg-black/40 rounded-full p-0.5" />
+                                    </motion.button>
+                                )}
+                                </AnimatePresence>
                             </div>
                         )}
                     </div>

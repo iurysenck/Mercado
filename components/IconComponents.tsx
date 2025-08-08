@@ -1,10 +1,12 @@
+
 import React from 'react';
 import {
     ShoppingCart, Trash2, Plus, Minus, Undo2, Redo2, Check, X, MoreVertical, Upload, RotateCw,
     List, Search, FilePenLine, GripVertical, CheckCircle2, ArrowLeftCircle, ClipboardPaste,
     Share2, Copy, CornerUpLeft, ChevronDown, MoreHorizontal, ListPlus, CircleDollarSign,
     BadgeCheck, Lamp, Wheat, Cylinder, Salad, Beef, Milk, ShowerHead, SprayCan, Croissant,
-    GlassWater, Blocks, Package, Sparkles, Slice, Cloud, ChevronLeft, ChevronRight, Palette
+    GlassWater, Blocks, Package, Sparkles, Slice, ChevronLeft, ChevronRight, Palette, Github, Settings,
+    AlertTriangle, Info
 } from 'lucide-react';
 
 export const ShoppingCartIcon = ShoppingCart;
@@ -34,10 +36,14 @@ export const EllipsisHorizontalIcon = MoreHorizontal;
 export const ListPlusIcon = ListPlus;
 export const CashIcon = CircleDollarSign;
 export const CheckBadgeIcon = BadgeCheck;
-export const CloudIcon = Cloud;
+export const LampIcon = Lamp;
 export const ChevronLeftIcon = ChevronLeft;
 export const ChevronRightIcon = ChevronRight;
 export const PaletteIcon = Palette;
+export const GithubIcon = Github;
+export const SettingsIcon = Settings;
+export const AlertTriangleIcon = AlertTriangle;
+export const InfoIcon = Info;
 
 export const WhatsAppIcon: React.FC<{ className?: string }> = (props) => (
   <svg

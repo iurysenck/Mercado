@@ -1,5 +1,6 @@
 import { GroceryItem, Category, FunnyMessage } from './types';
 
+export const VISITED_LISTS_KEY = 'grocery-app-visited-lists-v2';
 export const UNCATEGORIZED: Category = 'OUTROS';
 
 export const FUNNY_LIST_NAMES: string[] = [
@@ -106,53 +107,78 @@ export const FUNNY_LIST_NAMES: string[] = [
 ];
 
 export const PREDEFINED_CATEGORIES: Category[] = [
-    // Mercearia Salgada
-    'AÇÚCAR', 'ADOÇANTE', 'ARROZ', 'AZEITE', 'CALDOS', 'CONSERVAS', 'ENLATADOS', 'FARINHA DE MANDIOCA', 'FARINHA DE TRIGO', 'FEIJÃO', 'FUBÁ', 'MACARRÃO', 'MOLHOS', 'ÓLEO', 'SAL', 'SOPAS', 'TEMPEROS', 
+    // Alimentos Frescos
+    'HORTIFRUTI',
+    'FRUTAS',
+    'VERDURAS E LEGUMES',
+    'AÇOUGUE',
+    'CARNES BOVINAS',
+    'AVES',
+    'PEIXES E FRUTOS DO MAR',
+    'PADARIA',
+    'PÃES E BOLOS',
     
-    // Mercearia Doce / Matinais
-    'ACHOCOLATADO', 'AVEIA', 'BISCOITOS', 'BOLOS', 'CAFÉ', 'CEREAIS', 'CHOCOLATES', 'DOCES', 'FILTRO DE CAFÉ', 'GELÉIA', 'GRANOLA', 'MEL', 'SOBREMESAS',
+    // Mercearia
+    'MERCEARIA',
+    'ARROZ E FEIJÃO',
+    'MASSAS E MOLHOS',
+    'ÓLEOS, AZEITES E VINAGRES',
+    'FARINHAS E GRÃOS',
+    'TEMPEROS E CONDIMENTOS',
+    'ENLATADOS E CONSERVAS',
+    'CAFÉ, CHÁS E ACHOCOLATADOS',
 
-    // Hortifruti
-    'FRUTAS', 'LEGUMES', 'OVOS', 'VERDURAS',
+    // Frios, Laticínios e Congelados
+    'LATICÍNIOS E FRIOS',
+    'LEITES E IOGURTES',
+    'QUEIJOS E REQUEIJÃO',
+    'MANTEIGA E MARGARINA',
+    'CONGELADOS',
+    'PRATOS PRONTOS',
+    'SORVETES',
 
-    // Padaria e Laticínios
-    'CREME DE LEITE', 'FRIOS', 'IOGURTE', 'LATICÍNIOS', 'LEITE', 'MANTEIGA', 'MARGARINA', 'PÃES', 'QUEIJOS', 'REQUEIJÃO', 
+    // Bebidas e Doces
+    'BEBIDAS',
+    'SUCOS E REFRIGERANTES',
+    'ÁGUAS',
+    'BEBIDAS ALCOÓLICAS',
+    'SNACKS E DOCES',
+    'BISCOITOS E SALGADINHOS',
+    'CHOCOLATES E BALAS',
+    'SOBREMESAS',
 
-    // Carnes e Peixes
-    'AVES', 'CARNE BOVINA', 'CARNE SUÍNA', 'FRUTOS DO MAR', 'PEIXES',
-
-    // Congelados e Resfriados
-    'CONGELADOS', 'HAMBURGUER', 'LASANHA', 'PIZZA', 'POLPA DE FRUTA', 'PRATOS PRONTOS', 'SORVETE',
-
-    // Bebidas
-    'ÁGUA', 'CERVEJA', 'CHÁS', 'DESTILADOS', 'REFRIGERANTE', 'SUCOS', 'VINHO',
-
-    // Higiene Pessoal
-    'ABSORVENTE', 'CONDICIONADOR', 'CREME DENTAL', 'DESODORANTE', 'ESCOVA DE DENTE', 'FIO DENTAL', 'HIDRATANTE', 'HIGIENE', 'PAPEL HIGIÊNICO', 'PROTETOR SOLAR', 'SABONETE', 'SHAMPOO',
-
-    // Limpeza
-    'ÁGUA SANITÁRIA', 'AMACIANTE', 'DESINFETANTE', 'DETERGENTE', 'ESPONJA', 'LIMPA VIDROS', 'LIMPEZA', 'PANO DE CHÃO', 'SABÃO EM PÓ', 'SACO DE LIXO',
-
+    // Cuidados e Casa
+    'HIGIENE PESSOAL',
+    'CUIDADOS COM O CABELO',
+    'SAÚDE BUCAL',
+    'SABONETES E HIDRATANTES',
+    'LIMPEZA',
+    'LAVANDERIA',
+    'LIMPEZA GERAL',
+    
     // Outros
-    'AREIA PARA GATOS', 'LÂMPADAS', 'PET SHOP', 'PILHAS', 'RAÇÃO', 'UTILIDADES DOMÉSTICAS', 'VELAS',
+    'PET SHOP',
+    'UTILIDADES DOMÉSTICAS',
+    'CASA E JARDIM',
 ];
 
+
 export const FIRST_LAUNCH_ITEMS: GroceryItem[] = [
-  { id: 'first-1', checked: false, name: 'Café em grãos 250g', quantity: 1, unitPrice: 25.50, category: 'BÁSICO' },
-  { id: 'first-2', checked: false, name: 'Shampoo Anticaspa 200ml', quantity: 1, unitPrice: 18.50, category: 'HIGIENE' },
-  { id: 'first-3', checked: false, name: 'Pizza congelada de calabresa', quantity: 1, unitPrice: 22.90, category: 'FRIOS' },
+  { id: 'first-1', checked: false, name: 'Café em grãos 250g', quantity: 1, unitPrice: 25.50, category: 'MERCEARIA' },
+  { id: 'first-2', checked: false, name: 'Shampoo Anticaspa 200ml', quantity: 1, unitPrice: 18.50, category: 'HIGIENE PESSOAL' },
+  { id: 'first-3', checked: false, name: 'Pizza congelada de calabresa', quantity: 1, unitPrice: 22.90, category: 'CONGELADOS' },
 ];
 
 export const INITIAL_ITEMS: GroceryItem[] = [
-  { id: crypto.randomUUID(), checked: true, name: 'Arroz Integral', quantity: 2, unitPrice: 8.50, category: 'BÁSICO' },
-  { id: crypto.randomUUID(), checked: true, name: 'Azeite Extra Virgem', quantity: 1, unitPrice: 35.00, category: 'CONDIMENTOS' },
-  { id: crypto.randomUUID(), checked: true, name: 'Peito de Frango (Kg)', quantity: 2, unitPrice: 23.70, category: 'CARNES' },
+  { id: crypto.randomUUID(), checked: true, name: 'Arroz Integral', quantity: 2, unitPrice: 8.50, category: 'MERCEARIA' },
+  { id: crypto.randomUUID(), checked: true, name: 'Azeite Extra Virgem', quantity: 1, unitPrice: 35.00, category: 'MERCEARIA' },
+  { id: crypto.randomUUID(), checked: true, name: 'Peito de Frango (Kg)', quantity: 2, unitPrice: 23.70, category: 'AÇOUGUE' },
   { id: crypto.randomUUID(), checked: true, name: 'Pão de Forma Integral', quantity: 1, unitPrice: 8.99, category: 'PADARIA' },
-  { id: crypto.randomUUID(), checked: false, name: 'Leite Desnatado', quantity: 4, unitPrice: 4.50, category: 'LATICÍNIOS' },
-  { id: crypto.randomUUID(), checked: false, name: 'Ovos (dúzia)', quantity: 1, unitPrice: 17.00, category: 'BÁSICO' },
+  { id: crypto.randomUUID(), checked: false, name: 'Leite Desnatado', quantity: 4, unitPrice: 4.50, category: 'LATICÍNIOS E FRIOS' },
+  { id: crypto.randomUUID(), checked: false, name: 'Ovos (dúzia)', quantity: 1, unitPrice: 17.00, category: 'HORTIFRUTI' },
   { id: crypto.randomUUID(), checked: false, name: 'Sabão em Pó', quantity: 1, unitPrice: 22.00, category: 'LIMPEZA' },
-  { id: crypto.randomUUID(), checked: false, name: 'Shampoo', quantity: 1, unitPrice: 18.50, category: 'HIGIENE' },
-  { id: crypto.randomUUID(), checked: false, name: 'Lasanha Congelada', quantity: 2, unitPrice: 15.00, category: 'FRIOS' },
+  { id: crypto.randomUUID(), checked: false, name: 'Shampoo', quantity: 1, unitPrice: 18.50, category: 'HIGIENE PESSOAL' },
+  { id: crypto.randomUUID(), checked: false, name: 'Lasanha Congelada', quantity: 2, unitPrice: 15.00, category: 'CONGELADOS' },
 ];
 
 interface ColorStyle {
@@ -189,16 +215,15 @@ export const COLOR_PALETTE: ColorStyle[] = [
 ];
 
 const DEFAULT_CATEGORY_STYLES: Record<string, number> = {
-  'BÁSICO': 0, // yellow
-  'CEREAIS': 1, // orange
-  'ENLATADOS': 6, // purple
-  'CONDIMENTOS': 2, // red
-  'FRIOS': 11, // cyan
-  'LATICÍNIOS': 8, // indigo
-  'HIGIENE': 9, // blue
+  'HORTIFRUTI': 14, // green
+  'MERCEARIA': 1, // orange
+  'SNACKS E DOCES': 6, // purple
+  'AÇOUGUE': 2, // red
+  'CONGELADOS': 11, // cyan
+  'LATICÍNIOS E FRIOS': 8, // indigo
+  'HIGIENE PESSOAL': 9, // blue
   'LIMPEZA': 12, // teal
   'PADARIA': 16, // amber
-  'CARNES': 3, // rose
   'BEBIDAS': 15, // lime
   [UNCATEGORIZED]: 17, // gray
 };

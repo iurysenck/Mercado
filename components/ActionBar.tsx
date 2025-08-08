@@ -1,7 +1,9 @@
 
 
-import React, { useState, useEffect } from 'react';
-import { UploadIcon, ListBulletIcon, SearchIcon, PasteIcon, ShareIcon, UndoIcon, RedoIcon, CloudIcon } from './IconComponents';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { UploadIcon, ListBulletIcon, SearchIcon, PasteIcon, ShareIcon, UndoIcon, RedoIcon } from './IconComponents';
+import { motion } from 'framer-motion';
 
 interface ActionBarProps {
     listName: string;
@@ -16,22 +18,39 @@ interface ActionBarProps {
     onRedo: () => void;
     canUndo: boolean;
     canRedo: boolean;
-    isCloudList: boolean;
 }
 
 export const ActionBar: React.FC<ActionBarProps> = ({ 
     listName, onOpenImport, onOpenShare, onOpenListManager,
     searchQuery, onSearchQueryChange, onRenameList, isSelectionMode,
-    onUndo, onRedo, canUndo, canRedo, isCloudList
+    onUndo, onRedo, canUndo, canRedo
 }) => {
     const actionButtonClass = "p-3 rounded-full transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:bg-white/10";
     
     const [isEditing, setIsEditing] = useState(false);
     const [editingValue, setEditingValue] = useState(listName);
+    const listNameRef = useRef<HTMLHeadingElement>(null);
+    const [isOverflowing, setIsOverflowing] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
 
     useEffect(() => {
         if (!isEditing) {
             setEditingValue(listName);
+            
+            const checkOverflow = () => {
+                const el = listNameRef.current;
+                if (el) {
+                    setIsOverflowing(el.scrollWidth > el.clientWidth);
+                }
+            };
+
+            const timerId = setTimeout(checkOverflow, 50);
+
+            window.addEventListener('resize', checkOverflow);
+            return () => {
+                clearTimeout(timerId);
+                window.removeEventListener('resize', checkOverflow);
+            };
         }
     }, [listName, isEditing]);
 
@@ -63,27 +82,41 @@ export const ActionBar: React.FC<ActionBarProps> = ({
                             onBlur={handleRename}
                             onKeyDown={(e) => e.key === 'Enter' && handleRename()}
                             className="text-lg font-bold text-white tracking-tight bg-transparent border-b-2 border-blue-500 focus:outline-none w-full"
-                            autoFocus
                         />
                     ) : (
-                        <div className="flex items-center gap-2 min-w-0" onClick={() => !isSelectionMode && setIsEditing(true)}>
-                            <h1 className={`text-lg font-bold text-white tracking-tight truncate ${!isSelectionMode ? 'cursor-pointer' : ''}`} title={listName}>
-                                {listName}
-                            </h1>
-                            {isCloudList && (
-                                <span title="Esta lista está na nuvem e é sincronizada em tempo real.">
-                                    <CloudIcon className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                                </span>
-                            )}
+                        <div 
+                            className="flex items-center gap-2 min-w-0 flex-1 group" 
+                            onClick={() => !isSelectionMode && setIsEditing(true)}
+                            onMouseEnter={() => setIsHovered(true)}
+                            onMouseLeave={() => setIsHovered(false)}
+                        >
+                            <div className="overflow-hidden flex-1" title={listName}>
+                                <motion.h1
+                                    ref={listNameRef}
+                                    className={`text-lg font-bold text-white tracking-tight whitespace-nowrap ${!isSelectionMode ? 'cursor-pointer' : ''}`}
+                                    animate={{ x: isOverflowing && isHovered ? [0, -(listNameRef.current.scrollWidth - listNameRef.current.clientWidth)] : 0 }}
+                                    transition={{
+                                        x: {
+                                            repeat: Infinity,
+                                            repeatType: 'mirror',
+                                            duration: Math.max(3, (listNameRef.current?.scrollWidth || 0) / 50), // Slower for longer text
+                                            ease: 'linear',
+                                            delay: 0.5,
+                                        }
+                                    }}
+                                >
+                                    {listName}
+                                </motion.h1>
+                            </div>
                         </div>
                     )}
                 </div>
                 <div className="flex items-center space-x-0 flex-shrink-0">
                     <button onClick={onUndo} disabled={!canUndo} className={actionButtonClass} aria-label="Desfazer">
-                        <UndoIcon className="w-5 h-5" />
+                        <UndoIcon className={`w-5 h-5 transition-colors ${canUndo ? 'text-white' : 'text-gray-600'}`} />
                     </button>
                     <button onClick={onRedo} disabled={!canRedo} className={actionButtonClass} aria-label="Refazer">
-                        <RedoIcon className="w-5 h-5" />
+                        <RedoIcon className={`w-5 h-5 transition-colors ${canRedo ? 'text-white' : 'text-gray-600'}`} />
                     </button>
                     <button
                         onClick={onOpenImport}

@@ -36,6 +36,7 @@ O **Lista de Compras Inteligente** é uma aplicação web moderna e rica em recu
 - ✅ Categorização inteligente de produtos
 - ✅ Sistema de busca avançado
 - ✅ Navegação por hash (#/list/:id) para URLs únicas
+- ✅ Gerenciamento de múltiplas listas com ListManagerModal
 
 ### 💰 **Controle Financeiro**
 - ✅ Cálculo automático de preços em tempo real
@@ -61,6 +62,7 @@ O **Lista de Compras Inteligente** é uma aplicação web moderna e rica em recu
 - ✅ Navegador de categorias flutuante
 - ✅ Persistência local com localStorage
 - ✅ Sincronização em tempo real com Firebase
+- ✅ Gerenciamento avançado de listas com modal dedicado
 
 ### 🌟 **Funcionalidades Especiais**
 - ✅ **Fireworks**: Celebração quando lista é completada
@@ -68,6 +70,7 @@ O **Lista de Compras Inteligente** é uma aplicação web moderna e rica em recu
 - ✅ **CategoryNavigator**: Navegação rápida entre categorias
 - ✅ **FunnyMessageDisplay**: Mensagens engraçadas baseadas no total
 - ✅ **ColorPalettePicker**: Customização de cores por categoria
+- ✅ **ListManagerModal**: Modal completo para gerenciar listas
 
 ---
 
@@ -193,7 +196,6 @@ Mercado/
 ├── services/               # Serviços
 │   ├── firebase.ts        # Configuração Firebase
 │   └── geminiService.ts   # Serviços externos
-├── scripts/                # Scripts de automação
 ├── types.ts                # Definições de tipos
 ├── constants.ts            # Constantes da aplicação
 └── App.tsx                # Componente principal
@@ -220,6 +222,23 @@ Mercado/
 - **Firebase**: Sincronização em tempo real para listas compartilhadas
 - **Múltiplas listas**: Sistema de listas separadas
 - **Backup automático**: Salvamento contínuo
+
+---
+
+## 📋 To-Do
+
+### 🔥 **Funcionalidades Planejadas**
+- 🔄 **Salvar informações em servidor dedicado**: Migração de Firebase para servidor próprio
+- 🔐 **Login com Google**: Autenticação OAuth com Google
+- 🔗 **Lista compartilhada em tempo real com link**: Compartilhamento via URL única
+- 🎨 **Adicionar um ícone**: Ícone personalizado para o app
+
+### 🚀 **Melhorias Futuras**
+- 📱 **PWA completo**: Instalação como app nativo
+- 🔔 **Notificações push**: Lembretes e notificações
+- 📊 **Relatórios e estatísticas**: Análise de gastos e padrões
+- 🌐 **Sincronização multi-dispositivo**: Acesso em qualquer dispositivo
+- 🎯 **Modo offline avançado**: Funcionalidades offline completas
 
 ---
 
