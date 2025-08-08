@@ -6,7 +6,6 @@
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
 
 **Uma aplicação web moderna (PWA) com filosofia local-first, oferecendo uma experiência fluida e colaborativa para gerenciar listas de compras.**
 
@@ -23,7 +22,6 @@ O **Lista de Compras Inteligente** é uma aplicação web moderna e rica em recu
 ### 🏠 Filosofia Local-First
 - **Funcionamento offline**: O app funciona perfeitamente sem conexão
 - **Experiência rápida**: Carregamento instantâneo e responsivo
-- **Sincronização opcional**: Integração com Firebase para colaboração em tempo real
 - **Design inspirado**: Estética moderna inspirada em aplicativos como Notion
 
 ---
@@ -61,7 +59,6 @@ O **Lista de Compras Inteligente** é uma aplicação web moderna e rica em recu
 - ✅ Modo de seleção múltipla
 - ✅ Navegador de categorias flutuante
 - ✅ Persistência local com localStorage
-- ✅ Sincronização em tempo real com Firebase
 - ✅ Gerenciamento avançado de listas com modal dedicado
 
 ### 🌟 **Funcionalidades Especiais**
@@ -83,7 +80,6 @@ O **Lista de Compras Inteligente** é uma aplicação web moderna e rica em recu
 | **Vite** | 5.0+ | Build tool e dev server |
 | **Tailwind CSS** | 3.0+ | Framework CSS utilitário |
 | **Framer Motion** | 11.3+ | Biblioteca de animações avançadas |
-| **Firebase** | 10.0+ | Backend como serviço (Firestore) |
 | **Local Storage** | - | Persistência de dados local |
 
 ---
@@ -97,9 +93,8 @@ O estado é centralizado no componente raiz (`App.tsx`), que orquestra:
 - Query de busca e filtros
 - Modo de seleção
 
-### 🔄 Dualidade Local vs. Nuvem
+### 🔄 Persistência Local
 - **Listas Locais**: Gerenciadas pelo hook `useHistoryState` com histórico completo no localStorage
-- **Listas na Nuvem**: Reflexo do Firestore com sincronização em tempo real via `onSnapshot`
 - **Roteamento**: Controlado por hash (`#/list/:id`) para URLs únicas
 
 ### 🎨 Componentes Principais
@@ -194,8 +189,7 @@ Mercado/
 │   ├── useHaptics.ts      # Feedback háptico
 │   └── useHistoryState.ts # Histórico undo/redo
 ├── services/               # Serviços
-│   ├── firebase.ts        # Configuração Firebase
-│   └── geminiService.ts   # Serviços externos
+│   └── firebase.ts        # Configuração Firebase (preparado para futuro)
 ├── types.ts                # Definições de tipos
 ├── constants.ts            # Constantes da aplicação
 └── App.tsx                # Componente principal
@@ -217,9 +211,8 @@ Mercado/
 - **Total automático**: Cálculo em tempo real
 - **Subtotal por categoria**: Agrupamento inteligente
 
-### Persistência e Sincronização
+### Persistência Local
 - **Local Storage**: Dados salvos localmente com histórico
-- **Firebase**: Sincronização em tempo real para listas compartilhadas
 - **Múltiplas listas**: Sistema de listas separadas
 - **Backup automático**: Salvamento contínuo
 
@@ -228,7 +221,7 @@ Mercado/
 ## 📋 To-Do
 
 ### 🔥 **Funcionalidades Planejadas**
-- 🔄 **Salvar informações em servidor dedicado**: Migração de Firebase para servidor próprio
+- 🔄 **Salvar informações em servidor dedicado**: Implementação de backend próprio
 - 🔐 **Login com Google**: Autenticação OAuth com Google
 - 🔗 **Lista compartilhada em tempo real com link**: Compartilhamento via URL única
 - 🎨 **Adicionar um ícone**: Ícone personalizado para o app

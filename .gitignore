@@ -29,3 +29,6 @@ scripts/
 
 # Pasta scripts (excluir completamente)
 scripts/
+
+# Arquivos .bat (excluir completamente)
+*.bat
