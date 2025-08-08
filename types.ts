@@ -1,19 +1,7 @@
 
 
-export enum Category {
-  BASICO = 'BÁSICO',
-  CEREAIS = 'CEREAIS',
-  ENLATADOS = 'ENLATADOS',
-  CONDIMENTOS = 'CONDIMENTOS',
-  FRIOS = 'FRIOS',
-  LATICINIOS = 'LATICÍNIOS',
-  HIGIENE = 'HIGIENE',
-  LIMPEZA = 'LIMPEZA',
-  PADARIA = 'PADARIA',
-  CARNES = 'CARNES',
-  BEBIDAS = 'BEBIDAS',
-  OUTROS = 'OUTROS',
-}
+
+export type Category = string;
 
 export interface GroceryItem {
   id: string;
@@ -28,6 +16,7 @@ export interface GroceryListInfo {
   id: string;
   name: string;
   createdAt: string;
+  source: 'local' | 'cloud';
 }
 
 export interface FunnyMessage {

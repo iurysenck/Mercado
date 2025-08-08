@@ -1,41 +1,18 @@
 import { useState, useCallback, useEffect } from 'react';
 
 export function useHistoryState<T>(initialState: T, storageKey: string) {
-  const [history, setHistory] = useState<T[]>(() => {
-    try {
-      const storedHistory = window.localStorage.getItem(storageKey);
-      if (storedHistory) {
-        const parsedHistory = JSON.parse(storedHistory);
-        if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
-          return parsedHistory;
-        }
-      }
-    } catch (error) {
-      console.error(`Failed to parse history for ${storageKey} from localStorage`, error);
-    }
-    return [initialState];
-  });
-  
-  const [pointer, setPointer] = useState(() => history.length - 1);
+  const [history, setHistory] = useState<T[]>([initialState]);
+  const [pointer, setPointer] = useState(0);
 
-  // Save to localStorage whenever history changes
+  // Effect to load from storage when the key changes
   useEffect(() => {
-    // Prevent saving if storageKey is noop (e.g., when no list is active)
-    if (storageKey === 'noop') return;
-    
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify(history));
-    } catch (error) {
-      console.error(`Failed to save history for ${storageKey} to localStorage`, error);
+    if (storageKey === 'noop') {
+      setHistory([initialState]);
+      setPointer(0);
+      return;
     }
-  }, [history, storageKey]);
-
-  // Load from localStorage when storageKey changes
-  useEffect(() => {
-    if (storageKey === 'noop') return;
-    
     try {
-      const storedHistory = window.localStorage.getItem(storageKey);
+      const storedHistory = window.localStorage.getItem(`list-history-${storageKey}`);
       if (storedHistory) {
         const parsedHistory = JSON.parse(storedHistory);
         if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
@@ -45,31 +22,42 @@ export function useHistoryState<T>(initialState: T, storageKey: string) {
         }
       }
     } catch (error) {
-      console.error(`Failed to load history for ${storageKey} from localStorage`, error);
+      console.error(`Failed to parse history for ${storageKey} from localStorage`, error);
     }
-    
-    // If no valid data found, initialize with initialState
+    // If nothing in storage, initialize with the provided state
     setHistory([initialState]);
     setPointer(0);
-  }, [storageKey, initialState]);
+  }, [storageKey]); // Intentionally not including initialState to avoid re-initializing on prop changes
+
+  // Effect to save to storage
+  useEffect(() => {
+    if (storageKey === 'noop') return;
+    try {
+      window.localStorage.setItem(`list-history-${storageKey}`, JSON.stringify(history));
+    } catch (error) {
+      console.error(`Failed to save history for ${storageKey} to localStorage`, error);
+    }
+  }, [history, storageKey]);
 
   const setState = useCallback((newState: T | ((prevState: T) => T), bypass = false) => {
-    const resolvedState = typeof newState === 'function' 
-        ? (newState as (prevState: T) => T)(history[pointer]) 
-        : newState;
-    
-    if (bypass) {
-        // Replace current state without adding to history
-        const newHistory = [...history];
+    setHistory(currentHistory => {
+      const currentState = currentHistory[pointer] ?? initialState;
+      const resolvedState = typeof newState === 'function' 
+          ? (newState as (prevState: T) => T)(currentState) 
+          : newState;
+      
+      if (bypass) {
+        const newHistory = [...currentHistory];
         newHistory[pointer] = resolvedState;
-        setHistory(newHistory);
-    } else {
-        const newHistory = history.slice(0, pointer + 1);
+        return newHistory;
+      } else {
+        const newHistory = currentHistory.slice(0, pointer + 1);
         newHistory.push(resolvedState);
-        setHistory(newHistory);
         setPointer(newHistory.length - 1);
-    }
-  }, [pointer, history]);
+        return newHistory;
+      }
+    });
+  }, [pointer, initialState]);
 
   const undo = useCallback(() => {
     if (pointer > 0) {
@@ -83,12 +71,18 @@ export function useHistoryState<T>(initialState: T, storageKey: string) {
     }
   }, [pointer, history.length]);
 
+  const resetHistory = useCallback((newState: T) => {
+    setHistory([newState]);
+    setPointer(0);
+  }, []);
+
   return {
-    state: history[pointer] || initialState,
+    state: history[pointer] ?? initialState,
     setState,
     undo,
     redo,
     canUndo: pointer > 0,
     canRedo: pointer < history.length - 1,
+    resetHistory,
   };
 }

@@ -1,6 +1,8 @@
 {
-  "name": "Smart Grocery List",
-  "description": "An advanced, beautifully designed grocery list app to manage items, calculate costs, and import lists from various formats.",
-  "requestFramePermissions": [],
+  "name": "Copy of Lista de Compras Inteligente",
+  "description": "Sua lista de compras inteligente. Organize seus itens, calcule o total e compartilhe facilmente com amigos e família.",
+  "requestFramePermissions": [
+    "clipboard-read"
+  ],
   "prompt": ""
 }

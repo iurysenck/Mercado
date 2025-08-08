@@ -1,7 +1,9 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { GroceryItem, Category, GroceryListInfo } from './types';
-import { INITIAL_ITEMS } from './constants';
+import { GroceryItem, Category, GroceryListInfo, FunnyMessage } from './types';
+import { FUNNY_MESSAGES, UNCATEGORIZED, FUNNY_LIST_NAMES, FIRST_LAUNCH_ITEMS, PREDEFINED_CATEGORIES } from './constants';
+import * as Firebase from './services/firebase';
 import { useHistoryState } from './hooks/useHistoryState';
 
 import { ActionBar } from './components/ActionBar';
@@ -10,387 +12,703 @@ import { SummaryFooter } from './components/TableFooter';
 import { EditItemModal } from './components/EditItemModal';
 import { ImportModal } from './components/ImportModal';
 import { Toast } from './components/Toast';
-import { PlusIcon } from './components/IconComponents';
+import { PlusIcon, ListPlusIcon, CheckBadgeIcon } from './components/IconComponents';
 import { InteractiveBackground } from './components/InteractiveBackground';
 import { ListManagerModal } from './components/ListManagerModal';
 import { CategoryFilter } from './components/CategoryFilter';
 import { ShareModal } from './components/ShareModal';
 import { Fireworks } from './components/Fireworks';
-import { AdvancedOptionsModal } from './components/AdvancedOptionsModal';
+import { FunnyMessageDisplay } from './components/FunnyMessageDisplay';
+import { MenuFAB } from './components/MenuFAB';
+import { SelectionToolbar } from './components/SelectionToolbar';
+import { CategoryNavigator } from './components/CategoryNavigator';
+import { GroceryListSkeleton } from './components/GroceryListSkeleton';
 
-const APP_DATA_KEY = 'grocery-app-data-v2';
+const VISITED_LISTS_KEY = 'grocery-app-visited-lists-v2';
 
 const App: React.FC = () => {
-  const [lists, setLists] = useState<GroceryListInfo[]>([]);
   const [activeListId, setActiveListId] = useState<string | null>(null);
-  
-  const { state: items, setState, undo, redo, canUndo, canRedo } = useHistoryState<GroceryItem[]>(
-    [],
-    activeListId ? `grocery-list-history-${activeListId}` : 'noop'
-  );
+  const [activeListInfo, setActiveListInfo] = useState<GroceryListInfo | null>(null);
+  const [visitedLists, setVisitedLists] = useState<GroceryListInfo[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
+  const { 
+    state: items, 
+    setState, 
+    undo, 
+    redo, 
+    canUndo, 
+    canRedo,
+    resetHistory
+  } = useHistoryState<GroceryItem[]>([], activeListId || 'noop');
+  
   const [editingItem, setEditingItem] = useState<GroceryItem | null>(null);
   const [isImportModalOpen, setImportModalOpen] = useState(false);
   const [isListManagerOpen, setListManagerOpen] = useState(false);
   const [isShareModalOpen, setShareModalOpen] = useState(false);
-  const [isAdvancedOptionsOpen, setAdvancedOptionsOpen] = useState(false);
-  const [toast, setToast] = useState<{ id: number, message: string } | null>(null);
+  const [toast, setToast] = useState<{ id: number, message: string, showUndo?: boolean } | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [isCelebration, setCelebration] = useState(false);
+  const [funnyMessage, setFunnyMessage] = useState<FunnyMessage | null>(null);
+
+  const [isSelectionMode, setSelectionMode] = useState(false);
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+  const [visibleCategory, setVisibleCategory] = useState<Category | null>(null);
+  const [colorUpdateKey, setColorUpdateKey] = useState(0);
   
-  // Load initial data from localStorage
+  const isInitialCloudLoad = useRef(true);
+  const isCloudList = useMemo(() => activeListInfo?.source === 'cloud', [activeListInfo]);
+  const lastPriceTier = useRef(0);
+
+  // Force re-render on category color change
+  useEffect(() => {
+    const forceRerender = () => setColorUpdateKey(k => k + 1);
+    window.addEventListener('category-color-update', forceRerender);
+    return () => window.removeEventListener('category-color-update', forceRerender);
+  }, []);
+
+  // Step 1: Load visited lists from local storage once on app start.
   useEffect(() => {
     try {
-      const storedData = window.localStorage.getItem(APP_DATA_KEY);
-      if (storedData) {
-        const data = JSON.parse(storedData);
-        if (data.lists && data.activeListId) {
-          setLists(data.lists);
-          setActiveListId(data.activeListId);
-          return;
-        }
+      const stored = window.localStorage.getItem(VISITED_LISTS_KEY);
+      setVisitedLists(stored ? JSON.parse(stored) : []);
+    } catch (e) { 
+        console.error("Failed to load visited lists", e); 
+        setVisitedLists([]);
+    }
+  }, []);
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 250);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchQuery]);
+
+  const updateVisitedLists = useCallback((listInfo: GroceryListInfo) => {
+    setVisitedLists(prev => {
+      const newLists = [listInfo, ...(prev || []).filter(l => l.id !== listInfo.id)];
+      try {
+        window.localStorage.setItem(VISITED_LISTS_KEY, JSON.stringify(newLists));
+      } catch (e) {
+        console.error("Failed to save visited lists", e);
       }
-    } catch (e) {
-      console.error("Failed to load app data", e);
-    }
-    
-    // If no data, create the first list
-    const firstListId = crypto.randomUUID();
-    const firstList: GroceryListInfo = {
-      id: firstListId,
-      name: 'Minha Lista de Compras',
-      createdAt: new Date().toISOString(),
-    };
-    const historyKey = `grocery-list-history-${firstListId}`;
-    window.localStorage.setItem(historyKey, JSON.stringify([INITIAL_ITEMS]));
-
-    setLists([firstList]);
-    setActiveListId(firstListId);
+      return newLists;
+    });
   }, []);
 
-  // Save metadata to localStorage
-  useEffect(() => {
-    if (lists.length > 0 && activeListId) {
-      const data = { lists, activeListId };
-      window.localStorage.setItem(APP_DATA_KEY, JSON.stringify(data));
-    }
-  }, [lists, activeListId]);
+  const removeListFromVisited = useCallback((listId: string) => {
+      setVisitedLists(prev => {
+          const newLists = (prev || []).filter(l => l.id !== listId);
+          try {
+            window.localStorage.setItem(VISITED_LISTS_KEY, JSON.stringify(newLists));
+          } catch (e) {
+            console.error("Failed to save visited lists", e);
+          }
+          return newLists;
+      })
+  }, []);
   
-   // Check for celebration mode
-  useEffect(() => {
-    const allChecked = items.length > 0 && items.every(item => item.checked);
-    if (allChecked) {
-      setCelebration(true);
-    } else {
-      setCelebration(false);
-    }
-  }, [items]);
+  const showToast = useCallback((message: string, options?: { showUndo?: boolean }) => {
+    const canShowUndo = options?.showUndo && !isCloudList;
+    setToast({ id: Date.now(), message, showUndo: canShowUndo });
+  }, [isCloudList]);
 
-  const showToast = useCallback((message: string) => {
-    setToast({ id: Date.now(), message });
+  const handleToastDismiss = useCallback(() => {
+    setToast(null);
   }, []);
 
-  // Função para reset completo do app
-  const handleResetApp = useCallback(() => {
-    // Limpar todos os dados do localStorage
-    const keysToRemove: string[] = [];
-    
-    // Adicionar chaves de listas existentes
-    lists.forEach(list => {
-      keysToRemove.push(`grocery-list-history-${list.id}`);
-    });
-    
-    // Adicionar chave principal
-    keysToRemove.push(APP_DATA_KEY);
-    
-    // Remover todas as chaves
-    keysToRemove.forEach(key => {
-      window.localStorage.removeItem(key);
-    });
-    
-    // Recriar lista inicial
-    const firstListId = crypto.randomUUID();
-    const firstList: GroceryListInfo = {
-      id: firstListId,
-      name: 'Minha Lista de Compras',
-      createdAt: new Date().toISOString(),
+  const handleUndo = useCallback(() => {
+    if (!isCloudList) {
+      undo();
+      setToast(null);
+    }
+  }, [undo, isCloudList]);
+  
+  // Step 2: Handle routing after lists are loaded.
+  useEffect(() => {
+    if (visitedLists === null) return;
+
+    const handleHashChange = () => {
+        const hash = window.location.hash;
+        const match = hash.match(/#\/list\/(.*)/);
+        if (match && match[1]) {
+            setActiveListId(match[1]);
+        } else {
+            if (visitedLists.length > 0) {
+                window.location.hash = `#/list/${visitedLists[0].id}`;
+            } else {
+                // First time launch: create a new list.
+                const newListId = crypto.randomUUID();
+                const randomName = FUNNY_LIST_NAMES[Math.floor(Math.random() * FUNNY_LIST_NAMES.length)];
+                const newListInfo: GroceryListInfo = {
+                    id: newListId,
+                    name: randomName,
+                    createdAt: new Date().toISOString(),
+                    source: 'local',
+                };
+                
+                // Pre-populate the list with items for the first launch.
+                const firstLaunchItemsWithNewIds = FIRST_LAUNCH_ITEMS.map(item => ({
+                    ...item,
+                    id: crypto.randomUUID(),
+                }));
+                const firstLaunchHistory = [firstLaunchItemsWithNewIds];
+                window.localStorage.setItem(`list-history-${newListId}`, JSON.stringify(firstLaunchHistory));
+
+                updateVisitedLists(newListInfo);
+                window.location.hash = `#/list/${newListId}`;
+            }
+        }
     };
-    const historyKey = `grocery-list-history-${firstListId}`;
-    window.localStorage.setItem(historyKey, JSON.stringify([INITIAL_ITEMS]));
+    window.addEventListener('hashchange', handleHashChange);
+    handleHashChange(); // Trigger initial check
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [visitedLists, updateVisitedLists]);
 
-    setLists([firstList]);
-    setActiveListId(firstListId);
-    setState([INITIAL_ITEMS]);
+  // Step 3: Load list data when the active list ID changes.
+  useEffect(() => {
+    if (!activeListId || visitedLists === null) {
+        setIsLoading(false);
+        return;
+    }
+
+    setIsLoading(true);
+    let listInfo = visitedLists.find(l => l.id === activeListId);
+
+    // This handles the race condition on first app launch where activeListId is set
+    // but the newly created local list isn't in `visitedLists` state yet.
+    // In this case, we just wait for the next render.
+    if (!listInfo && visitedLists.length === 0) {
+        return; // Keep loading, wait for `visitedLists` to update.
+    }
+
+    // This handles opening a shared link for the first time. The list is not in
+    // `visitedLists`, so we add it as a 'cloud' list and prepare to fetch.
+    if (!listInfo) {
+        listInfo = { id: activeListId, name: 'Carregando Lista...', createdAt: new Date().toISOString(), source: 'cloud' };
+        updateVisitedLists(listInfo);
+    }
     
-    showToast('App resetado com sucesso!');
-  }, [lists, setState, showToast]);
+    setActiveListInfo(listInfo);
 
-  const handleSaveItem = useCallback((itemToSave: GroceryItem) => {
-    const itemExists = items.some(i => i.id === itemToSave.id);
-    if (itemExists) {
-        setState(prevItems => prevItems.map(item => item.id === itemToSave.id ? itemToSave : item));
-        showToast('Item atualizado.');
+    if (listInfo.source === 'local') {
+        // useHistoryState hook handles loading from localStorage automatically
+        setIsLoading(false);
+        return;
+    }
+    
+    // Cloud list logic
+    if (listInfo.source === 'cloud') {
+        isInitialCloudLoad.current = true;
+        
+        const db = Firebase.getDb();
+        if(!db) {
+            setIsLoading(false);
+            showToast("Firebase não está configurado.");
+            return;
+        }
+
+        const listDocRef = Firebase.doc(db, 'lists', activeListId);
+        const itemsCollectionRef = Firebase.collection(db, 'lists', activeListId, 'items');
+
+        const unsubscribeList = Firebase.onSnapshot(listDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const cloudListInfo = { id: docSnap.id, source: 'cloud', ...docSnap.data() } as GroceryListInfo;
+                setActiveListInfo(cloudListInfo);
+                updateVisitedLists(cloudListInfo);
+            } else {
+                showToast("Lista não encontrada ou foi excluída.");
+                removeListFromVisited(activeListId);
+                window.location.hash = ''; 
+            }
+        });
+
+        const unsubscribeItems = Firebase.onSnapshot(itemsCollectionRef, (snapshot) => {
+            const itemsData = snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as GroceryItem));
+            
+            if (isInitialCloudLoad.current) {
+                resetHistory(itemsData);
+                isInitialCloudLoad.current = false;
+            } else {
+                setState(itemsData, true); 
+            }
+            setIsLoading(false);
+        }, (error) => {
+          console.error("Error fetching items:", error);
+          showToast("Erro ao carregar itens da lista.");
+          setIsLoading(false);
+        });
+
+        return () => {
+            unsubscribeList();
+            unsubscribeItems();
+        };
+    }
+  }, [activeListId, visitedLists, removeListFromVisited, resetHistory, setState, showToast, updateVisitedLists]);
+  
+  useEffect(() => {
+    const allChecked = items.length > 0 && !isLoading && items.every(item => item.checked);
+    setCelebration(allChecked);
+  }, [items, isLoading]);
+
+  const totalPrice = useMemo(() => items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0), [items]);
+  
+  // Reset price tier tracker when list changes
+  useEffect(() => {
+    lastPriceTier.current = 0;
+  }, [activeListId]);
+
+  // Effect to automatically clear the funny message after a delay
+  useEffect(() => {
+    if (funnyMessage) {
+      const timer = setTimeout(() => {
+        setFunnyMessage(null);
+      }, 20000); // Message visible for 20 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [funnyMessage]);
+
+  // Effect to trigger a new funny message when the total price crosses a threshold
+  useEffect(() => {
+    const baseThreshold = 300;
+    const increment = 100;
+
+    // Don't show a new message if one is already visible or price is below the initial threshold
+    if (funnyMessage || totalPrice < baseThreshold) {
+      return;
+    }
+
+    // Determine the next price threshold that should trigger a message
+    const nextThreshold = lastPriceTier.current === 0
+      ? baseThreshold
+      : lastPriceTier.current + increment;
+
+    // Check if the current total price has crossed the next threshold
+    if (totalPrice >= nextThreshold) {
+      const randomIndex = Math.floor(Math.random() * FUNNY_MESSAGES.length);
+      setFunnyMessage(FUNNY_MESSAGES[randomIndex]);
+
+      // To handle large jumps in price, calculate the highest threshold crossed
+      const currentTier = Math.floor((totalPrice - baseThreshold) / increment) * increment + baseThreshold;
+      lastPriceTier.current = currentTier;
+    }
+  }, [totalPrice, funnyMessage]);
+
+  const handleSaveItem = useCallback(async (itemToSave: GroceryItem) => {
+    const { id, ...itemData } = itemToSave;
+    if (isCloudList) {
+        if (!activeListId) return;
+        const db = Firebase.getDb();
+        if(!db) return;
+        const itemsCollection = Firebase.collection(db, 'lists', activeListId, 'items');
+        try {
+            if (items.some(i => i.id === id)) {
+                await Firebase.updateDoc(Firebase.doc(itemsCollection, id), itemData);
+            } else {
+                const docRef = await Firebase.addDoc(itemsCollection, itemData);
+                // In cloud mode, we don't manipulate local state directly.
+                // The onSnapshot listener will receive the update.
+            }
+            showToast('Item salvo na nuvem.');
+        } catch (e) { showToast("Falha ao salvar item na nuvem."); }
     } else {
-        setState(prevItems => [itemToSave, ...prevItems]);
-        showToast('Item adicionado.');
+        const isNew = !items.some(i => i.id === id);
+        setState(currentItems => {
+            return isNew 
+                ? [...currentItems, itemToSave] 
+                : currentItems.map(i => i.id === id ? itemToSave : i);
+        });
+        showToast(isNew ? 'Item adicionado.' : 'Item atualizado.', { showUndo: true });
     }
     setEditingItem(null);
-  }, [items, setState, showToast]);
+  }, [activeListId, isCloudList, items, setState, showToast]);
 
   const handleAddItem = useCallback(() => {
-    const newItem: GroceryItem = {
-      id: crypto.randomUUID(),
-      checked: false,
-      name: '',
-      quantity: 1,
-      unitPrice: 0,
-      category: null,
-    };
-    setEditingItem(newItem);
+    setEditingItem({
+      id: `new-${crypto.randomUUID()}`,
+      checked: false, name: '', quantity: 1, unitPrice: 0, category: null,
+    });
   }, []);
   
-  const handleDeleteItem = useCallback((id: string) => {
-    setState(prevItems => prevItems.filter(item => item.id !== id));
-    showToast('Item removido.');
-  }, [setState, showToast]);
+  const handleDeleteItem = useCallback(async (id: string) => {
+    if (isCloudList) {
+        if (!activeListId) return;
+        const db = Firebase.getDb();
+        if(!db) return;
+        try {
+            await Firebase.deleteDoc(Firebase.doc(db, 'lists', activeListId, 'items', id));
+        } catch (e) { showToast("Falha ao excluir item."); }
+    } else {
+        setState(current => current.filter(i => i.id !== id));
+        showToast('Item excluído.', { showUndo: true });
+    }
+    setEditingItem(null);
+  }, [activeListId, isCloudList, setState, showToast]);
 
-  const handleToggleChecked = useCallback((id: string) => {
-    setState(prevItems => prevItems.map(item => 
-      item.id === id ? { ...item, checked: !item.checked } : item
-    ));
-  }, [setState]);
+  const handleToggleChecked = useCallback(async (id: string, forceState?: boolean) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    const isChecked = typeof forceState === 'boolean' ? forceState : !item.checked;
+    
+    if (isCloudList) {
+        if (!activeListId) return;
+        const db = Firebase.getDb();
+        if(!db) return;
+        try {
+            await Firebase.updateDoc(Firebase.doc(db, 'lists', activeListId, 'items', id), { checked: isChecked });
+        } catch (e) { showToast("Falha ao atualizar item."); }
+    } else {
+        setState(current => current.map(i => i.id === id ? { ...i, checked: isChecked } : i));
+        const message = isChecked ? 'Item marcado como comprado.' : 'Item movido para a lista.';
+        showToast(message, { showUndo: true });
+    }
+  }, [activeListId, items, isCloudList, setState, showToast]);
 
-  const handleReorderItems = useCallback((reorderedItems: GroceryItem[]) => {
-    setState(reorderedItems);
-  }, [setState]);
-
-  const handleClearChecked = useCallback(() => {
-    setState(prevItems => prevItems.filter(item => !item.checked));
-    showToast('Itens comprados removidos.');
-  }, [setState, showToast]);
-
-  const handleUncheckAll = useCallback(() => {
-    setState(prevItems => prevItems.map(item => ({ ...item, checked: false })));
-    showToast('Todos os itens desmarcados.');
-  }, [setState, showToast]);
-
-  const handleClearList = useCallback(() => {
-    setState([]);
-    showToast('Lista limpa.');
-  }, [setState, showToast]);
-
-  const handleResetPrices = useCallback(() => {
-    setState(prevItems => prevItems.map(item => ({ ...item, unitPrice: 0 })));
-    showToast('Preços zerados.');
-  }, [setState, showToast]);
-
-  const handleImportList = useCallback((importedItems: GroceryItem[]) => {
-    setState(importedItems);
-    showToast('Lista importada com sucesso!');
+  const handleImportList = useCallback(async (importedItems: GroceryItem[]) => {
+    if (isCloudList) {
+        if (!activeListId) return;
+        const db = Firebase.getDb();
+        if(!db) return;
+        const itemsCollection = Firebase.collection(db, 'lists', activeListId, 'items');
+        const batch = Firebase.writeBatch(db);
+        importedItems.forEach(item => {
+          const { id, ...itemData } = item; // Don't persist temporary ID
+          batch.set(Firebase.doc(itemsCollection), itemData)
+        });
+        try {
+            await batch.commit();
+            showToast(`${importedItems.length} itens importados.`);
+        } catch (e) { showToast("Falha na importação."); }
+    } else {
+        setState(current => [...current, ...importedItems]);
+        showToast(`${importedItems.length} itens importados.`, { showUndo: true });
+    }
     setImportModalOpen(false);
-  }, [setState, showToast]);
+  }, [activeListId, isCloudList, setState, showToast]);
 
-  const handleToggleCategoryFilter = useCallback((category: Category) => {
-    setSelectedCategories(prev => 
-      prev.includes(category) 
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
-    );
-  }, []);
-
-  const handleCreateList = useCallback((name: string) => {
+  const handleCreateList = (name: string) => {
     const newListId = crypto.randomUUID();
-    const newList: GroceryListInfo = {
-      id: newListId,
-      name,
-      createdAt: new Date().toISOString(),
+    const newListInfo: GroceryListInfo = {
+        id: newListId,
+        name,
+        createdAt: new Date().toISOString(),
+        source: 'local',
     };
-    setLists(prev => [...prev, newList]);
-    setActiveListId(newListId);
-    setState([]);
-    showToast('Nova lista criada.');
-  }, [setState, showToast]);
+    updateVisitedLists(newListInfo);
+    window.location.hash = `#/list/${newListId}`;
+    setListManagerOpen(false);
+  };
 
-  const handleRenameList = useCallback((id: string, newName: string) => {
-    setLists(prev => prev.map(list => 
-      list.id === id ? { ...list, name: newName } : list
-    ));
-    showToast('Lista renomeada.');
-  }, [showToast]);
+  const handleSelectList = (id: string) => {
+    window.location.hash = `#/list/${id}`;
+    setListManagerOpen(false);
+  };
 
-  const handleRenameActiveList = useCallback((newName: string) => {
-    if (activeListId) {
-      handleRenameList(activeListId, newName);
+  const handleRenameList = async (id: string, newName: string) => {
+    const list = (visitedLists || []).find(l => l.id === id);
+    if (!list) return;
+
+    if (list.source === 'cloud') {
+        const db = Firebase.getDb();
+        if(!db) return;
+        try {
+            await Firebase.updateDoc(Firebase.doc(db, 'lists', id), { name: newName });
+            showToast('Lista renomeada.');
+        } catch(e) { showToast("Falha ao renomear lista."); }
+    } else {
+        const updatedList = { ...list, name: newName };
+        updateVisitedLists(updatedList);
+        if (activeListId === id) {
+          setActiveListInfo(updatedList);
+        }
+        showToast('Lista renomeada.');
     }
-  }, [activeListId, handleRenameList]);
+  };
+  
+  const handleRenameActiveList = (newName: string) => {
+    if (activeListId) handleRenameList(activeListId, newName);
+  };
 
-  const handleDeleteList = useCallback((id: string) => {
-    setLists(prev => prev.filter(list => list.id !== id));
-    if (activeListId === id) {
-      const remainingLists = lists.filter(list => list.id !== id);
-      if (remainingLists.length > 0) {
-        setActiveListId(remainingLists[0].id);
-      } else {
-        // Se não há mais listas, criar uma nova
-        const newListId = crypto.randomUUID();
-        const newList: GroceryListInfo = {
-          id: newListId,
-          name: 'Minha Lista de Compras',
-          createdAt: new Date().toISOString(),
-        };
-        setLists([newList]);
-        setActiveListId(newListId);
-        setState([INITIAL_ITEMS]);
-      }
+  const handleDeleteList = async (id: string) => {
+    if (!window.confirm("Tem certeza que deseja excluir esta lista? Esta ação não pode ser desfeita.")) return;
+    const list = (visitedLists || []).find(l => l.id === id);
+    if (!list) return;
+
+    if (list.source === 'cloud') {
+        const db = Firebase.getDb();
+        if(!db) return;
+        try {
+            const itemsRef = Firebase.collection(db, 'lists', id, 'items');
+            const itemsSnap = await Firebase.getDocs(itemsRef);
+            const batch = Firebase.writeBatch(db);
+            itemsSnap.forEach(docSnap => batch.delete(docSnap.ref));
+            await batch.commit();
+            await Firebase.deleteDoc(Firebase.doc(db, 'lists', id));
+        } catch(e) {
+            showToast("Falha ao excluir lista da nuvem.");
+            return;
+        }
+    } else {
+        window.localStorage.removeItem(`list-history-${id}`);
     }
-    showToast('Lista removida.');
-  }, [activeListId, lists, setState, showToast]);
+    
+    removeListFromVisited(id);
+    showToast('Lista excluída.');
+    if (activeListId === id) window.location.hash = '';
+  };
 
-  const activeList = useMemo(() => 
-    lists.find(list => list.id === activeListId), 
-    [lists, activeListId]
+  const handlePublishList = async () => {
+    if (!activeListInfo || activeListInfo.source === 'cloud') return;
+    const localId = activeListInfo.id;
+    
+    setIsLoading(true);
+    try {
+        const db = Firebase.getDb();
+        if(!db) {
+          setIsLoading(false);
+          return;
+        }
+
+        const listCollection = Firebase.collection(db, 'lists');
+        const newListDoc = await Firebase.addDoc(listCollection, {
+            name: activeListInfo.name,
+            createdAt: new Date().toISOString(),
+        });
+        
+        const newCloudId = newListDoc.id;
+        const itemsCollection = Firebase.collection(db, 'lists', newCloudId, 'items');
+        const batch = Firebase.writeBatch(db);
+        items.forEach(item => {
+            const { id, ...itemData } = item;
+            batch.set(Firebase.doc(itemsCollection), itemData);
+        });
+        await batch.commit();
+
+        const newCloudInfo: GroceryListInfo = { ...activeListInfo, id: newCloudId, source: 'cloud' };
+
+        removeListFromVisited(localId);
+        window.localStorage.removeItem(`list-history-${localId}`);
+        updateVisitedLists(newCloudInfo);
+        
+        showToast("Lista publicada com sucesso!");
+        window.location.hash = `#/list/${newCloudId}`;
+    } catch(e) {
+        showToast("Falha ao publicar lista.");
+        console.error(e);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleMassUpdate = async (updateLogic: (batch: any, id: string) => void, localUpdate: (items: GroceryItem[]) => GroceryItem[], logMessage: string) => {
+    const count = selectedItemIds.size;
+    if (count === 0 || !activeListId) return;
+
+    if (isCloudList) {
+        const db = Firebase.getDb();
+        if(!db) return;
+        const batch = Firebase.writeBatch(db);
+        selectedItemIds.forEach(id => updateLogic(batch, id));
+        try {
+            await batch.commit();
+            showToast(logMessage);
+        } catch (e) { showToast(`Falha na operação.`); }
+    } else {
+        setState(currentItems => localUpdate(currentItems));
+        showToast(logMessage, { showUndo: true });
+    }
+    toggleSelectionMode();
+  };
+
+  const handleDeleteSelected = () => handleMassUpdate(
+      (batch, id) => batch.delete(Firebase.doc(Firebase.getDb()!, 'lists', activeListId!, 'items', id)),
+      items => items.filter(i => !selectedItemIds.has(i.id)),
+      `${selectedItemIds.size} ${selectedItemIds.size > 1 ? 'itens excluídos' : 'item excluído'}.`
   );
 
-  const filteredItems = useMemo(() => {
-    let filtered = items;
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(item => 
-        item.name.toLowerCase().includes(query)
-      );
-    }
-    
-    if (selectedCategories.length > 0) {
-      filtered = filtered.filter(item => 
-        item.category && selectedCategories.includes(item.category)
-      );
-    }
-    
-    return filtered;
-  }, [items, searchQuery, selectedCategories]);
+  const handleCheckSelected = (checkState: boolean) => handleMassUpdate(
+      (batch, id) => batch.update(Firebase.doc(Firebase.getDb()!, 'lists', activeListId!, 'items', id), { checked: checkState }),
+      items => items.map(i => selectedItemIds.has(i.id) ? { ...i, checked: checkState } : i),
+      `${selectedItemIds.size} ${selectedItemIds.size > 1 ? 'itens marcados' : 'item marcado'}.`
+  );
 
-  const sortedItems = useMemo(() => {
-    return [...filteredItems].sort((a, b) => {
-      if (a.checked !== b.checked) {
-        return a.checked ? 1 : -1;
-      }
-      return a.name.localeCompare(b.name);
+  const handleZeroPriceSelected = () => {
+    if (window.confirm(`Tem certeza que deseja zerar o preço de ${selectedItemIds.size} item(ns) selecionado(s)?`)) {
+        handleMassUpdate(
+            (batch, id) => batch.update(Firebase.doc(Firebase.getDb()!, 'lists', activeListId!, 'items', id), { unitPrice: 0 }),
+            items => items.map(i => selectedItemIds.has(i.id) ? { ...i, unitPrice: 0 } : i),
+            `Preços de ${selectedItemIds.size} ${selectedItemIds.size > 1 ? 'itens zerados' : 'item zerado'}.`
+        );
+    }
+  };
+
+  const toggleSelectionMode = useCallback(() => {
+    setSelectionMode(prev => !prev);
+    setSelectedItemIds(new Set());
+  }, []);
+
+  const toggleItemSelection = useCallback((id: string) => {
+    setSelectedItemIds(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(id)) newSet.delete(id);
+        else newSet.add(id);
+        return newSet;
     });
-  }, [filteredItems]);
+  }, []);
 
-  const showNoResultsMessage = searchQuery || selectedCategories.length > 0;
+  const fabActions = useMemo(() => [
+    { label: 'Iniciar Nova Lista', icon: <ListPlusIcon className="w-5 h-5"/>, onClick: () => handleCreateList('Nova Lista') },
+    { label: 'Selecionar Itens', icon: <CheckBadgeIcon className="w-5 h-5"/>, onClick: toggleSelectionMode },
+  ], [handleCreateList, toggleSelectionMode]);
+
+  const availableCategories = useMemo(() => Array.from(new Set(items.map(i => i.category).filter(Boolean) as Category[])).sort((a, b) => a.localeCompare(b)), [items]);
+  
+  const categorySuggestionsForModal = useMemo(() => {
+    const combined = new Set([...PREDEFINED_CATEGORIES, ...availableCategories]);
+    return Array.from(combined).sort();
+  }, [availableCategories]);
+  
+  const filteredItems = useMemo(() => items.filter(item => item.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase())).filter(item => selectedCategories.length === 0 || (item.category && selectedCategories.includes(item.category))), [items, debouncedSearchQuery, selectedCategories]);
+  const sortedItems = useMemo(() => [...filteredItems].sort((a, b) => a.checked !== b.checked ? (a.checked ? 1 : -1) : 0), [filteredItems]);
+  const orderedCategories = useMemo(() => Array.from(new Set(sortedItems.map(item => item.category || UNCATEGORIZED))).sort((a, b) => a === UNCATEGORIZED ? 1 : b === UNCATEGORIZED ? -1 : a.localeCompare(b)), [sortedItems]);
+  const showNoResultsMessage = useMemo(() => (searchQuery.length > 0 || selectedCategories.length > 0) && sortedItems.length === 0 && items.length > 0, [searchQuery, selectedCategories, sortedItems, items]);
+
+  const handleCategoryNavClick = useCallback((category: Category) => {
+    document.getElementById(`category-header-${category}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  if (visitedLists === null) {
+    return <div className="bg-gray-950 min-h-screen text-white flex items-center justify-center">Carregando App...</div>
+  }
 
   return (
-    <InteractiveBackground mood={isCelebration ? 'celebration' : 'default'}>
+    <InteractiveBackground key={colorUpdateKey} mood={isCelebration ? 'celebration' : 'default'}>
       <div className="min-h-screen text-gray-300 font-sans flex flex-col">
         <div className="w-full max-w-2xl mx-auto flex-grow flex flex-col">
-          <ActionBar
-            listName={activeList?.name || 'Carregando...'}
-            onUndo={undo}
-            onRedo={redo}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            onOpenImport={() => setImportModalOpen(true)}
-            onResetPrices={handleResetPrices}
-            onOpenListManager={() => setListManagerOpen(true)}
-            onOpenShare={() => setShareModalOpen(true)}
-            searchQuery={searchQuery}
-            onSearchQueryChange={setSearchQuery}
-            onClearList={handleClearList}
-            onRenameList={handleRenameActiveList}
-            onOpenAdvancedOptions={() => setAdvancedOptionsOpen(true)}
-          />
-          <div className="px-2 sm:px-4 lg:px-0">
-            <CategoryFilter selectedCategories={selectedCategories} onToggleCategory={handleToggleCategoryFilter} />
-          </div>
-          <main className="px-2 sm:px-4 lg:px-0 pb-40 flex-grow">
-              <GroceryList 
-                  items={sortedItems}
-                  onToggleChecked={handleToggleChecked}
-                  onEditItem={setEditingItem}
-                  onReorderItems={handleReorderItems}
-                  showNoResultsMessage={showNoResultsMessage}
+          <div className="bg-gray-950/70 backdrop-blur-lg">
+            <ActionBar
+              listName={activeListInfo?.name || 'Carregando...'}
+              onOpenImport={() => setImportModalOpen(true)}
+              onOpenListManager={() => setListManagerOpen(true)}
+              onOpenShare={() => setShareModalOpen(true)}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              onRenameList={handleRenameActiveList}
+              isSelectionMode={isSelectionMode}
+              onUndo={undo}
+              onRedo={redo}
+              canUndo={canUndo && !isCloudList}
+              canRedo={canRedo && !isCloudList}
+              isCloudList={!!isCloudList}
+            />
+            <div className="px-2 sm:px-4 lg:px-0">
+              <CategoryFilter 
+                selectedCategories={selectedCategories} 
+                onToggleCategory={(cat) => setSelectedCategories(p => p.includes(cat) ? p.filter(c => c !== cat) : [...p, cat])}
+                availableCategories={availableCategories}
               />
+            </div>
+          </div>
+          <main className="px-2 sm:px-4 lg:px-0 pb-36 flex-grow">
+              {isLoading && !items.length ? (
+                 <GroceryListSkeleton />
+              ) : (
+                <GroceryList 
+                    items={sortedItems}
+                    onToggleChecked={handleToggleChecked}
+                    onEditItem={setEditingItem}
+                    onDeleteItem={handleDeleteItem}
+                    showNoResultsMessage={showNoResultsMessage}
+                    isSelectionMode={isSelectionMode}
+                    selectedItemIds={selectedItemIds}
+                    onToggleItemSelection={toggleItemSelection}
+                    activeFilters={selectedCategories}
+                    orderedCategories={orderedCategories}
+                    onVisibleCategoryChange={setVisibleCategory}
+                />
+              )}
           </main>
         </div>
-        <SummaryFooter items={items} onClearChecked={handleClearChecked} onUncheckAll={handleUncheckAll} />
+
+        <FunnyMessageDisplay funnyMessage={funnyMessage} onClose={() => setFunnyMessage(null)} />
         
-        <button 
-          onClick={handleAddItem} 
-          className="fixed bottom-20 right-4 z-30 bg-blue-600 hover:bg-blue-500 text-white rounded-full p-4 shadow-lg transition-transform transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500"
-          aria-label="Adicionar novo item"
-        >
-          <PlusIcon className="w-6 h-6" />
-        </button>
+        <AnimatePresence>
+            {!isSelectionMode && items.length > 0 && (
+                <CategoryNavigator categories={orderedCategories} activeCategory={visibleCategory} onCategoryClick={handleCategoryNavClick} />
+            )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+            {!isSelectionMode && <SummaryFooter items={items} onToggleSelectionMode={toggleSelectionMode} />}
+        </AnimatePresence>
+        
+        <AnimatePresence>
+            {isSelectionMode && (
+                <SelectionToolbar 
+                    selectedCount={selectedItemIds.size}
+                    totalCount={items.length}
+                    onClose={toggleSelectionMode}
+                    onDelete={handleDeleteSelected}
+                    onCheck={handleCheckSelected}
+                    onZeroPrice={handleZeroPriceSelected}
+                    onSelectAll={() => setSelectedItemIds(prev => prev.size === items.length ? new Set() : new Set(items.map(i => i.id)))}
+                />
+            )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+        {!isSelectionMode && (
+            <>
+                <MenuFAB actions={fabActions} />
+                <button 
+                  onClick={handleAddItem} 
+                  className="fixed bottom-6 right-6 z-30 bg-blue-600 hover:bg-blue-500 text-white rounded-full p-4 shadow-lg transition-transform transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500"
+                  aria-label="Adicionar novo item"
+                >
+                  <PlusIcon className="w-8 h-8" />
+                </button>
+            </>
+        )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {editingItem && (
-            <EditItemModal
-              item={editingItem}
-              onClose={() => setEditingItem(null)}
-              onSave={handleSaveItem}
-              onDelete={handleDeleteItem}
-            />
+            <EditItemModal item={editingItem} onClose={() => setEditingItem(null)} onSave={handleSaveItem} onDelete={handleDeleteItem} availableCategories={categorySuggestionsForModal} />
           )}
         </AnimatePresence>
 
         <AnimatePresence>
-          {isImportModalOpen && (
-            <ImportModal
-              onClose={() => setImportModalOpen(false)}
-              onImport={handleImportList}
-            />
-          )}
+          {isImportModalOpen && ( <ImportModal onClose={() => setImportModalOpen(false)} onImport={handleImportList} /> )}
         </AnimatePresence>
         
         <AnimatePresence>
-          {isShareModalOpen && activeListId && (
+          {isShareModalOpen && activeListInfo && (
             <ShareModal
               onClose={() => setShareModalOpen(false)}
-              lists={lists}
-              activeListId={activeListId}
+              listInfo={activeListInfo}
+              items={items}
+              onPublish={handlePublishList}
             />
           )}
         </AnimatePresence>
 
         <AnimatePresence>
-          {isListManagerOpen && activeListId && (
-            <ListManagerModal
-              onClose={() => setListManagerOpen(false)}
-              lists={lists}
-              activeListId={activeListId}
-              onSelectList={setActiveListId}
-              onCreateList={handleCreateList}
-              onRenameList={handleRenameList}
-              onDeleteList={handleDeleteList}
-            />
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {isAdvancedOptionsOpen && (
-            <AdvancedOptionsModal
-              onClose={() => setAdvancedOptionsOpen(false)}
-              onResetApp={handleResetApp}
-            />
+          {isListManagerOpen && visitedLists && (
+            <ListManagerModal onClose={() => setListManagerOpen(false)} lists={visitedLists} activeListId={activeListId} onSelectList={handleSelectList} onCreateList={handleCreateList} onRenameList={handleRenameList} onDeleteList={handleDeleteList} />
           )}
         </AnimatePresence>
 
         <AnimatePresence>
           {toast && (
-            <Toast
-              key={toast.id}
-              message={toast.message}
-              onUndo={() => {
-                if(canUndo) undo();
-                setToast(null);
-              }}
-              onDismiss={() => setToast(null)}
-              canUndo={canUndo}
-            />
+            <Toast key={toast.id} message={toast.message} onDismiss={handleToastDismiss} isFunnyMessageVisible={!!funnyMessage} canUndo={toast.showUndo && canUndo && !isCloudList} onUndo={handleUndo} />
           )}
         </AnimatePresence>
 

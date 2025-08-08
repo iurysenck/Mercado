@@ -32,8 +32,8 @@ export const InteractiveBackground: React.FC<InteractiveBackgroundProps> = ({ ch
     const currentColors = colors[mood];
 
     return (
-        <div className="relative bg-gray-950 min-h-full overflow-hidden">
-            <div className="absolute inset-0 z-0">
+        <div className="relative bg-gray-950 min-h-full">
+            <div className="fixed inset-0 z-0 overflow-hidden">
                 <div className="absolute inset-0 bg-black/30"></div>
                 <Blob
                     className={`w-[500px] h-[500px] ${currentColors.blob1}`}

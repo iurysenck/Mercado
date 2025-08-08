@@ -1,12 +1,15 @@
-import React, { useState, useRef } from 'react';
-import { motion } from 'framer-motion';
+
+
+import React, { useState, useMemo } from 'react';
+import { motion, Variants } from 'framer-motion';
 import { GroceryListInfo } from '../types';
-import { CloseIcon, PlusIcon, EditIcon, TrashIcon, PasteIcon } from './IconComponents';
+import { CloseIcon, PlusIcon, EditIcon, TrashIcon, PasteIcon, CloudIcon } from './IconComponents';
+import { FUNNY_LIST_NAMES } from '../constants';
 
 interface ListManagerModalProps {
     onClose: () => void;
     lists: GroceryListInfo[];
-    activeListId: string;
+    activeListId: string | null;
     onSelectList: (id: string) => void;
     onCreateList: (name: string) => void;
     onRenameList: (id: string, newName: string) => void;
@@ -17,11 +20,28 @@ export const ListManagerModal: React.FC<ListManagerModalProps> = ({
     onClose, lists, activeListId, onSelectList, onCreateList, onRenameList, onDeleteList
 }) => {
     const [newListName, setNewListName] = useState('');
+    const [nameError, setNameError] = useState(false);
+
+    const placeholderName = useMemo(() => {
+        return FUNNY_LIST_NAMES[Math.floor(Math.random() * FUNNY_LIST_NAMES.length)];
+    }, []);
+
+    const shakeVariants: Variants = {
+        initial: { x: 0 },
+        animate: {
+            x: [0, -8, 8, -8, 8, 0],
+            transition: { type: 'spring', stiffness: 500, damping: 20, duration: 0.5 }
+        }
+    };
 
     const handleCreate = () => {
         if (newListName.trim()) {
             onCreateList(newListName.trim());
             setNewListName('');
+            setNameError(false);
+        } else {
+            setNameError(true);
+            setTimeout(() => setNameError(false), 600);
         }
     };
     
@@ -53,7 +73,7 @@ export const ListManagerModal: React.FC<ListManagerModalProps> = ({
             >
                 <header className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
                     <h2 className="text-xl font-bold text-white">Gerenciar Listas</h2>
-                    <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full">
+                    <button onClick={onClose} className="p-3 -m-3 text-gray-400 hover:text-white hover:bg-white/10 rounded-full">
                         <CloseIcon />
                     </button>
                 </header>
@@ -66,29 +86,42 @@ export const ListManagerModal: React.FC<ListManagerModalProps> = ({
                                 className={`flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer ${list.id === activeListId ? 'bg-blue-500/20' : 'bg-white/5 hover:bg-white/10'}`}
                                 onClick={() => onSelectList(list.id)}
                             >
-                                <div className="flex-grow">
-                                    <p className="font-semibold text-white">{list.name}</p>
-                                    <p className="text-xs text-gray-400">Criada em: {new Date(list.createdAt).toLocaleDateString()}</p>
+                                <div className="flex-grow flex items-center gap-3">
+                                    {list.source === 'cloud' && <CloudIcon className="w-5 h-5 text-blue-400 flex-shrink-0" />}
+                                    <div className="flex-grow">
+                                      <p className="font-semibold text-white">{list.name}</p>
+                                      <p className="text-xs text-gray-400">Criada em: {new Date(list.createdAt).toLocaleDateString()}</p>
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                    <button onClick={(e) => { e.stopPropagation(); handleRename(list.id); }} className="p-2 text-gray-300 hover:text-white hover:bg-white/20 rounded-md"><EditIcon className="w-4 h-4"/></button>
-                                    <button onClick={(e) => { e.stopPropagation(); onDeleteList(list.id); }} className="p-2 text-red-400 hover:text-white hover:bg-red-500/20 rounded-md"><TrashIcon className="w-4 h-4"/></button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleRename(list.id); }} className="p-3 text-gray-300 hover:text-white hover:bg-white/20 rounded-md"><EditIcon className="w-4 h-4"/></button>
+                                    <button onClick={(e) => { e.stopPropagation(); onDeleteList(list.id); }} className="p-3 text-red-400 hover:text-white hover:bg-red-500/20 rounded-md"><TrashIcon className="w-4 h-4"/></button>
                                 </div>
                             </div>
                         ))}
+                         {lists.length === 0 && (
+                            <p className="text-center text-gray-400 py-8">Nenhuma lista encontrada. Crie uma abaixo!</p>
+                        )}
                     </div>
                 </main>
                 
                 <footer className="p-4 mt-auto border-t border-white/10 flex-shrink-0">
                     <div className="flex gap-2">
-                         <div className="relative flex-grow">
+                        <motion.div
+                            variants={shakeVariants}
+                            animate={nameError ? "animate" : "initial"}
+                            className="relative flex-grow"
+                        >
                             <input
                                 type="text"
                                 value={newListName}
-                                onChange={(e) => setNewListName(e.target.value)}
+                                onChange={(e) => {
+                                    setNewListName(e.target.value);
+                                    if(nameError) setNameError(false);
+                                }}
                                 onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-                                placeholder="Digite o nome da nova lista..."
-                                className="w-full bg-gray-900/50 border-2 border-white/10 rounded-md p-3 pr-12 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder={`Nome da nova lista (Ex: ${placeholderName})`}
+                                className={`w-full bg-gray-900/50 border-2 rounded-md p-3 pr-14 text-white focus:ring-2 focus:ring-blue-500 transition-colors duration-300 ${nameError ? 'border-red-500/80 ring-red-500/50' : 'border-white/10 focus:border-blue-500'}`}
                             />
                             <button
                                 type="button"
@@ -100,12 +133,12 @@ export const ListManagerModal: React.FC<ListManagerModalProps> = ({
                                         console.error('Failed to paste from clipboard', err);
                                     }
                                 }}
-                                className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-white"
+                                className="absolute inset-y-0 right-0 flex items-center px-4 text-gray-400 hover:text-white"
                                 aria-label="Colar nome da lista"
                             >
                                 <PasteIcon className="w-5 h-5"/>
                             </button>
-                        </div>
+                        </motion.div>
                          <button onClick={handleCreate} className="px-4 py-3 font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-md transition-colors flex items-center gap-2">
                             <PlusIcon className="w-5 h-5" />
                             <span>Criar</span>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GroceryItem, Category } from '../types';
 import { CloseIcon, UploadIcon, PasteIcon } from './IconComponents';
@@ -19,23 +19,37 @@ const PLACEHOLDERS: Record<Tab, string> = {
     "unitPrice": 5.50,
     "category": "LATICÍNIOS",
     "checked": false
-  },
-  {
-    "name": "Café em Pó",
-    "quantity": 1,
-    "unitPrice": 12.00,
-    "category": "BÁSICO",
-    "checked": true
   }
 ]`,
-    csv: "Pão de Forma,1,8.99,PADARIA,false\nDetergente,2,2.50,LIMPEZA,true\nSabonete,3,1.99,HIGIENE,false",
+    csv: "Pão de Forma,1,8.99,PADARIA,false\nDetergente,2,2.50,LIMPEZA,true",
 };
+
+interface TabButtonProps {
+    tabId: Tab;
+    activeTab: Tab;
+    label: string;
+    onClick: (tabId: Tab) => void;
+}
+
+const TabButton: React.FC<TabButtonProps> = ({ tabId, activeTab, label, onClick }) => (
+    <button
+        onClick={() => onClick(tabId)}
+        className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition-colors ${activeTab === tabId ? 'bg-gray-700/50 text-white' : 'text-gray-400 hover:bg-gray-700/20 hover:text-gray-200'}`}
+    >
+        {label}
+    </button>
+);
 
 
 export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport }) => {
     const [activeTab, setActiveTab] = useState<Tab>('text');
     const [inputValue, setInputValue] = useState('');
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setInputValue('');
+        setError(null);
+    }, [activeTab]);
 
     const handleImport = () => {
         setError(null);
@@ -63,14 +77,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport }) =
                 if (!Array.isArray(data)) throw new Error("O JSON deve ser um array de objetos.");
                 newItems = data.map((item: any) => {
                     if (!item.name || typeof item.name !== 'string') throw new Error("Cada objeto no JSON deve ter uma propriedade 'name' do tipo texto.");
-                    const validCategory = Object.values(Category).find(c => c === item.category);
                     return {
                         id: crypto.randomUUID(),
                         name: item.name,
                         checked: !!item.checked,
                         quantity: typeof item.quantity === 'number' && item.quantity > 0 ? item.quantity : 1,
                         unitPrice: typeof item.unitPrice === 'number' && item.unitPrice >= 0 ? item.unitPrice : 0,
-                        category: validCategory || null,
+                        category: typeof item.category === 'string' ? item.category.trim().toUpperCase() : null,
                     };
                 });
             } else if (activeTab === 'csv') {
@@ -79,14 +92,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport }) =
                     .filter(line => line)
                     .map(line => {
                         const [name, quantity, unitPrice, category, checked] = line.split(',');
-                        const validCategory = Object.values(Category).find(c => c === category?.trim().toUpperCase());
-
                         return {
                             id: crypto.randomUUID(),
                             name: name?.trim() || 'Item sem nome',
                             quantity: parseInt(quantity?.trim()) || 1,
                             unitPrice: parseFloat(unitPrice?.trim().replace(',', '.')) || 0,
-                            category: validCategory || null,
+                            category: category?.trim().toUpperCase() || null,
                             checked: checked?.trim().toLowerCase() === 'true',
                         };
                     });
@@ -97,27 +108,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport }) =
             setError(e instanceof Error ? e.message : 'Formato inválido. Verifique o console para mais detalhes.');
         }
     };
-
-    const TabButton: React.FC<{ tab: Tab, label: string }> = ({ tab, label }) => (
-        <button
-            onClick={() => {
-                setActiveTab(tab);
-                setError(null);
-                setInputValue('');
-            }}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition-colors ${activeTab === tab ? 'bg-gray-700/50 text-white' : 'text-gray-400 hover:bg-gray-700/20 hover:text-gray-200'}`}
-        >
-            {label}
-        </button>
-    );
-
+    
     const handlePaste = async () => {
         try {
             const text = await navigator.clipboard.readText();
             setInputValue(text);
         } catch (err) {
             console.error('Failed to read clipboard contents: ', err);
-            setError('Falha ao colar da área de transferência. Por favor, cole manualmente.');
+            setError('Falha ao colar da área de transferência. Por favor, cole manualmente ou verifique as permissões do navegador.');
+            alert('Não foi possível ler da área de transferência. Verifique as permissões do seu navegador.');
         }
     };
     
@@ -148,9 +147,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport }) =
 
                 <main className="p-4 sm:p-6 flex-grow flex flex-col">
                     <div className="flex border-b border-white/10">
-                        <TabButton tab="text" label="Texto Puro" />
-                        <TabButton tab="json" label="JSON" />
-                        <TabButton tab="csv" label="CSV" />
+                        <TabButton tabId="text" activeTab={activeTab} label="Texto Puro" onClick={setActiveTab} />
+                        <TabButton tabId="json" activeTab={activeTab} label="JSON" onClick={setActiveTab} />
+                        <TabButton tabId="csv" activeTab={activeTab} label="CSV" onClick={setActiveTab} />
                     </div>
                     <div className="bg-gray-700/50 p-4 rounded-b-lg flex-grow flex flex-col">
                         <AnimatePresence mode="wait">
@@ -168,7 +167,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport }) =
                                     <button
                                         type="button"
                                         onClick={handlePaste}
-                                        className="absolute top-2 right-2 p-2 text-gray-400 hover:text-white bg-gray-900/50 rounded-full hover:bg-white/10"
+                                        className="absolute top-2 right-2 p-3 text-gray-400 hover:text-white bg-gray-900/50 rounded-full hover:bg-white/10"
                                         aria-label="Colar da área de transferência"
                                     >
                                         <PasteIcon className="w-4 h-4"/>
